@@ -1,6 +1,8 @@
 
 CFLAGS = -Wall -c
 
+
+
 objects = main.o game-states.o lib-game-states.o player.o utils.o
 
 ALLEGRO = `pkg-config allegro-5 allegro_font-5 allegro_image-5 \
@@ -24,12 +26,15 @@ lib-game-states.o: lib-game-states.c lib-game-states.h
 player.o: player.c player.h 
 	gcc $(CFLAGS) player.c
 
-# enemy.o: enemy.c
-# 	gcc $(CFLAGS) enemy.c
+enemy.o: enemy.c enemy.h
+	gcc $(CFLAGS) enemy.c
 
 utils.o: utils.c utils.h
 	gcc $(CFLAGS) utils.c
 
+# da uma olhada no video explicando sobre debugs
+debug:
+	CFLAGS += -d
 
 clean:
 	rm -f *.o

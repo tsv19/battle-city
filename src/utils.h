@@ -11,6 +11,7 @@
 #include <allegro5/allegro_acodec.h>
 #include <allegro5/allegro_image.h>
 
+// usado para definir qual o estado da maquina de estados do jogo
 typedef enum
 {
 	START, 
@@ -22,6 +23,21 @@ typedef enum
 
 extern STATE_GAME state;
 
+// usado para definir qual sprite ser usado de acordo com a direcao
+typedef enum
+{
+	UP, 
+	DOWN, 
+	LEFT, 
+	RIGHT
+} DIRECTIONS;
+
+// extern long frames;
+extern long score;
+
 void mustInit(bool test, const char *description);
+int between(int lower, int higher);
+float between_f(float lower, float higher);
+bool collide(int ax1, int ay1, int ax2, int ay2, int bx1, int by1, int bx2, int by2);
 
 #endif

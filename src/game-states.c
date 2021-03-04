@@ -12,15 +12,29 @@ unsigned char           key[ALLEGRO_KEY_MAX];
 
 void stateInit()
 {
+    mustInit(al_init(), "allegro");
+    mustInit(al_install_keyboard(), "keyboard");
+
     createTimer();
     
     createQueue();
 
-    createFont();
-
     createDisplay();
+    
+    // audio
 
-    // mustInit(al_init_primitives_addon(), "primitives");
+    mustInit(al_init_image_addon(), "image");
+    initSprites();
+
+    // hud
+
+    mustInit(al_init_primitives_addon(), "primitives");
+
+
+    initFont();
+
+    initKeyboard();
+    initTank();
 
     // createAudio(name, arq);
 
@@ -67,18 +81,18 @@ void stateInit()
         if(done)
             break;
 
-        keyboardUpdate(&event);
+        updateKeyboard(&event);
 
         if(redraw && al_is_event_queue_empty(queue))
         {
             // redesenha as coisas da tela
+            displayPreDraw();
 
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), DISPLAY_W/2, DISPLAY_H/2, 
+            al_draw_text(font, al_map_rgb(255, 255, 255), BUFFER_W/2, BUFFER_H/2, 
             ALLEGRO_ALIGN_CENTER, "TELA INICIAL PIKA");
 
-            al_flip_display();
-
+            displayPostDraw();
             redraw = false;
         }
     }
@@ -94,13 +108,10 @@ void stateServe()
 
 void statePlay()
 {
-    keyboardInit();
-
 	bool done = false;
     bool redraw = true;
     ALLEGRO_EVENT event;
 
-    al_start_timer(timer);
     for(;;)
     {
         al_wait_for_event(queue, &event);
@@ -109,6 +120,8 @@ void statePlay()
         {
             case ALLEGRO_EVENT_TIMER:
                 // faz update das coisas, posicoes etc
+                updateTank();
+
                 if(key[ALLEGRO_KEY_ESCAPE])
                     done = true;
 
@@ -125,17 +138,17 @@ void statePlay()
         if(done)
             break;
 
-        keyboardUpdate(&event);
+        updateKeyboard(&event);
 
         if(redraw && al_is_event_queue_empty(queue))
         {
             // redesenha as coisas da tela
-
+            displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), DISPLAY_W/2, DISPLAY_H/2, 
-            ALLEGRO_ALIGN_CENTER, "EH PRA SER O JOGO");
 
-            al_flip_display();
+            drawTank();
+
+            displayPostDraw();
 
             redraw = false;
         }
@@ -157,9 +170,10 @@ void stateCloseGame()
 {
 	// al_destroy_audio_stream(music);
     // al_destroy_sample(elephant);
-    al_destroy_font(font);
-    al_destroy_display(display);
-    al_destroy_timer(timer);
-    al_destroy_event_queue(queue);
+    deinitSprites();
+    deinitFont();
+    destroyDisplay();
+    destroyTimer();
+    destroyQueue();
 	exit(0);
 }
