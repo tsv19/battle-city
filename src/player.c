@@ -11,9 +11,9 @@ void initTank()
     tank.y = (BUFFER_H / 2) - (TANK_H / 2);
 	tank.direction = UP;
     tank.shotTimer = 0;
-    tank.lives = 3;
+    tank.lives = MAX_LIVES;
     tank.respawnTimer = 0;
-    tank.invincibleTimer = 120;
+    tank.invincibleTimer = INVINCIBLE_TIMER;
 }
 
 
@@ -59,11 +59,11 @@ void updateTank()
     if(tank.y > TANK_MAX_Y)
         tank.y = TANK_MAX_Y;
 
-    // if(tank.invincibleTimer)
-        // tank.invincibleTimer--;
+    if(tank.invincibleTimer)
+        tank.invincibleTimer--;
     // else
     // {
-    //     if(shots_collide(true, tank.x, tank.y, TANK_W, TANK_H))
+    //     if(collideShots(true, tank.x, tank.y, TANK_W, TANK_H))
     //     {
     //         int x = tank.x + (TANK_W / 2);
     //         int y = tank.y + (TANK_H / 2);
@@ -73,19 +73,21 @@ void updateTank()
     //         fx_add(false, x+1, y-5);
 
     //         tank.lives--;
-    //         tank.respawnTimer = 90;
-    //         tank.invincibleTimer = 180;
+    //         tank.respawnTimer = RESPAWN_TIMER;
+    //         tank.invincibleTimer = INVINCIBLE_TIMER;
     //     }
     // }
 
-    // if(tank.shotTimer)
-        // tank.shotTimer--;
-    // else if(key[ALLEGRO_KEY_X])
-    // {
-    //     int x = tank.x + (TANK_W / 2);
-        // if(shots_add(true, false, x, tank.y))
-    //         tank.shotTimer = 5;
-    // }
+    if(tank.shotTimer)
+        tank.shotTimer--;
+    else if(key[ALLEGRO_KEY_X])
+    {
+        int x = tank.x + (TANK_W / 2);
+        int y = tank.y + (TANK_H / 2);
+        
+        if(addShots(true, false, x, y, tank.direction))
+            tank.shotTimer = SHOT_TIMER;
+    }
 }
 
 

@@ -35,6 +35,7 @@ void stateInit()
 
     initKeyboard();
     initTank();
+    initShots();
 
     // createAudio(name, arq);
 
@@ -121,6 +122,7 @@ void statePlay()
             case ALLEGRO_EVENT_TIMER:
                 // faz update das coisas, posicoes etc
                 updateTank();
+                updateShots();
 
                 if(key[ALLEGRO_KEY_ESCAPE])
                     done = true;
@@ -147,7 +149,8 @@ void statePlay()
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
             drawTank();
-
+            drawShots();
+            
             displayPostDraw();
 
             redraw = false;

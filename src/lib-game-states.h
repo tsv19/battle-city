@@ -11,8 +11,6 @@
 #define DISPLAY_SCALE 3
 #define DISPLAY_W (BUFFER_W * DISPLAY_SCALE)
 #define DISPLAY_H (BUFFER_H * DISPLAY_SCALE)
-#define SHOT_W 3
-#define SHOT_H 4
 
 // keybord stuffs
 #define KEY_SEEN     1
@@ -28,6 +26,22 @@ typedef struct SPRITES
     ALLEGRO_BITMAP* enemies[4];
 } SPRITES;
 
+// shot stuffs
+#define SHOTS_N 128
+#define SHOT_W 3
+#define SHOT_H 4
+#define SHOT_SPEED 3
+#define SHOT_TIMER 100
+
+typedef struct SHOT
+{
+    int x, y, dx, dy;
+    DIRECTIONS direction;
+    int frame;
+    bool player;
+    bool used;
+} SHOT;
+
 // variaveis globais externalizadas 
 extern ALLEGRO_TIMER           	*timer;
 extern ALLEGRO_EVENT_QUEUE     	*queue;
@@ -36,6 +50,7 @@ extern ALLEGRO_BITMAP			*buffer;
 extern ALLEGRO_FONT            	*font;
 extern SPRITES                  sprites;
 extern unsigned char key[ALLEGRO_KEY_MAX];
+extern SHOT shots[SHOTS_N];
 
 
 /* ============================== header functions ========================== */
@@ -70,6 +85,13 @@ void deinitFont();
 // audio stuffs
 void initAudio();
 void createAudio(ALLEGRO_SAMPLE *audio, char *name);
+
+// shots stuffs
+void initShots();
+bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction);
+void updateShots();
+bool collideShots(bool player, int x, int y, int w, int h);
+void drawShots();
 
 
 #endif

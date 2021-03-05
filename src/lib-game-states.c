@@ -9,6 +9,7 @@ ALLEGRO_BITMAP			*buffer;
 ALLEGRO_FONT            *font;
 SPRITES                 sprites;
 unsigned char key[ALLEGRO_KEY_MAX];
+SHOT shots[SHOTS_N];
 
 // variaveis globais
 
@@ -182,4 +183,186 @@ void createAudio(ALLEGRO_SAMPLE *audio, char *name)
 
 
 /* ================================= shots ===================================*/
+void initShots()
+{
+    for(int i = 0; i < SHOTS_N; i++)
+        shots[i].used = false;
+}
 
+bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
+{
+    // al_play_sample(
+    //     sample_shot,
+    //     0.3,
+    //     0,
+    //     player ? 1.0 : between_f(1.5, 1.6),
+    //     ALLEGRO_PLAYMODE_ONCE,
+    //     NULL
+    // );
+
+    for(int i = 0; i < SHOTS_N; i++)
+    {
+        if(shots[i].used)
+            continue;
+
+        shots[i].player = player;
+
+        if(player)
+        {
+            shots[i].direction = direction;
+
+            if (shots[i].direction == UP)
+            {
+                shots[i].x = x - (SHOT_W / 2) - 1;
+                shots[i].y = y - (TANK_H / 2);
+            }
+            if (shots[i].direction == DOWN)
+            {
+                shots[i].x = x - (SHOT_W / 2) - 1;
+                shots[i].y = y + SHOT_W + 1;
+            }
+            if (shots[i].direction == LEFT)
+            {
+                shots[i].x = x - (TANK_W / 2);
+                shots[i].y = y - 2;
+            }
+            if (shots[i].direction == RIGHT)
+            {
+                shots[i].x = x + SHOT_W + 1;
+                shots[i].y = y - (SHOT_H / 2);
+            }            
+        }
+        else // enemy
+        {
+            shots[i].x = x - (SHOT_W / 2);
+            shots[i].y = y - (SHOT_H / 2);
+
+            if(straight)
+            {
+                shots[i].dx = 0;
+                shots[i].dy = 2;
+            }
+            else
+            {
+                shots[i].dx = between(-2, 2);
+                shots[i].dy = between(-2, 2);
+            }
+
+            // if the shot has no speed, don't bother
+            if(!shots[i].dx && !shots[i].dy)
+                return true;
+
+            shots[i].frame = 0;
+        }
+
+        shots[i].frame = 0;
+        shots[i].used = true;
+
+        return true;
+    }
+    return false;
+}
+
+void updateShots()
+{
+    for(int i = 0; i < SHOTS_N; i++)
+    {
+        if(!shots[i].used)
+            continue;
+
+        if(shots[i].player)
+        {
+            if (shots[i].direction == UP)
+                shots[i].y -= SHOT_SPEED;
+            if (shots[i].direction == DOWN)
+                shots[i].y += SHOT_SPEED;
+            if (shots[i].direction == LEFT)
+                shots[i].x -= SHOT_SPEED;
+            if (shots[i].direction == RIGHT)
+                shots[i].x += SHOT_SPEED;
+
+
+            if(shots[i].y < -SHOT_H)
+            {
+                shots[i].used = false;
+                continue;
+            }
+        }
+        else // alien
+        {
+            shots[i].x += shots[i].dx;
+            shots[i].y += shots[i].dy;
+
+            if((shots[i].x < -SHOT_W)
+            || (shots[i].x > BUFFER_W)
+            || (shots[i].y < -SHOT_H)
+            || (shots[i].y > BUFFER_H)
+            ) {
+                shots[i].used = false;
+                continue;
+            }
+        }
+
+        shots[i].frame++;
+    }
+}
+
+bool collideShots(bool player, int x, int y, int w, int h)
+{
+    for(int i = 0; i < SHOTS_N; i++)
+    {
+        if(!shots[i].used)
+            continue;
+
+        // don't collide with one's own shots
+        if(shots[i].player == player)
+            continue;
+
+        int sw, sh;
+        if(player)
+        {
+            sw = SHOT_W;
+            sh = SHOT_H;
+        }
+        else
+        {
+            sw = SHOT_W;
+            sh = SHOT_H;
+        }
+
+        if(collide(x, y, x+w, y+h, shots[i].x, shots[i].y, shots[i].x+sw, shots[i].y+sh))
+        {
+            // fx_add(true, shots[i].x + (sw / 2), shots[i].y + (sh / 2));
+            shots[i].used = false;
+            return true;
+        }
+    }
+
+    return false;
+}
+
+void drawShots()
+{
+    for(int i = 0; i < SHOTS_N; i++)
+    {
+        if(!shots[i].used)
+            continue;
+
+        int frame_display = (shots[i].frame / 2) % 2;
+
+        if(shots[i].player)
+            al_draw_bitmap(sprites.shot[shots[i].direction], shots[i].x, 
+            shots[i].y, 0);
+        else // alien
+        {
+            ALLEGRO_COLOR tint =
+                frame_display
+                ? al_map_rgb_f(1, 1, 1)
+                : al_map_rgb_f(0.5, 0.5, 0.5)
+            ;
+            
+            al_draw_tinted_bitmap(sprites.shot[shots[i].direction], tint, 
+            shots[i].x, shots[i].y, 0);
+        }
+    }
+}
