@@ -16,7 +16,7 @@ int between(int lower, int higher)
 }
 
 
-float between_f(float lower, float higher)
+float betweenF(float lower, float higher)
 {
     return lower + ((float)rand() / (float)RAND_MAX) * (higher - lower);
 }

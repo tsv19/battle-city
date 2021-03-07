@@ -8,47 +8,30 @@ ALLEGRO_DISPLAY         *display;
 ALLEGRO_BITMAP			*buffer;
 ALLEGRO_FONT            *font;
 unsigned char           key[ALLEGRO_KEY_MAX];
-
+long score;
+long frames;
+MAP_T                   *map;
 
 void stateInit()
 {
     mustInit(al_init(), "allegro");
     mustInit(al_install_keyboard(), "keyboard");
-
-    createTimer();
-    
-    createQueue();
-
-    createDisplay();
-    
-    // audio
-
     mustInit(al_init_image_addon(), "image");
-    initSprites();
-
-    // hud
-
     mustInit(al_init_primitives_addon(), "primitives");
 
-
-    initFont();
-
+    createTimer();
+    createQueue();
+    createDisplay();
     initKeyboard();
-    initTank();
-    initShots();
-
-    // createAudio(name, arq);
-
-    // ALLEGRO_AUDIO_STREAM* music = al_load_audio_stream("music.opus", 2, 2048);
-    // mustInit(music, "music");
-    // al_set_audio_stream_playmode(music, ALLEGRO_PLAYMODE_LOOP);
-    // al_attach_audio_stream_to_mixer(music, al_get_default_mixer());
+    initHud();
+    initAudio();
+    initSprites();
 
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_display_event_source(display));
     al_register_event_source(queue, al_get_timer_event_source(timer));
 
-    bool done = false;
+    bool done   = false;
     bool redraw = true;
     ALLEGRO_EVENT event;
 
@@ -63,19 +46,19 @@ void stateInit()
                 // faz update das coisas, posicoes etc
                 if(key[ALLEGRO_KEY_ESCAPE]){
                     state = ENDGAME;
-                    done = true;
+                    done  = true;
                 }
                 
                 if(key[ALLEGRO_KEY_ENTER]){
                     state = SERVING;
-                    done = true;
+                    done  = true;
                 }
 
                 break;
 
             case ALLEGRO_EVENT_DISPLAY_CLOSE:
                 state = ENDGAME;
-                done = true;
+                done  = true;
                 break;
         }
 
@@ -90,27 +73,37 @@ void stateInit()
             displayPreDraw();
 
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 255, 255), BUFFER_W/2, BUFFER_H/2, 
-            ALLEGRO_ALIGN_CENTER, "TELA INICIAL PIKA");
+            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/3, 
+            ALLEGRO_ALIGN_CENTER, "BATTLE CITY");
+
+            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/2, 
+            ALLEGRO_ALIGN_CENTER, "PLAY [ENTER]");
+            
+            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/2 + 20, 
+            ALLEGRO_ALIGN_CENTER, "HELP [H]");
 
             displayPostDraw();
             redraw = false;
         }
     }
-
 }
 
 
 void stateServe()
 {
-	state = PLAYING;
+    score = 0;
+    map = initMap();
+    initTank();
+    initEnemies();
+    initShots();
+    state = PLAYING;
 }
 
 
 void statePlay()
 {
-	bool done = false;
     bool redraw = true;
+	bool done   = false;
     ALLEGRO_EVENT event;
 
     for(;;)
@@ -122,18 +115,23 @@ void statePlay()
             case ALLEGRO_EVENT_TIMER:
                 // faz update das coisas, posicoes etc
                 updateTank();
+                updateEnemies();
                 updateShots();
+                updateHud();
 
                 if(key[ALLEGRO_KEY_ESCAPE])
-                    done = true;
+                    state = ENDGAME;
+
+                if (state == GAMEOVER || state == ENDGAME)
+                    done  = true;
 
                 redraw = true;
-                // frames++;
+                frames++;
                 break;
 
             case ALLEGRO_EVENT_DISPLAY_CLOSE:
                 state = ENDGAME;
-                done = true;
+                done  = true;
                 break;
         }
 
@@ -148,33 +146,113 @@ void statePlay()
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
+            drawWalls(map);
             drawTank();
+            drawEnemies();
             drawShots();
-            
-            displayPostDraw();
+            drawHud();
 
+            displayPostDraw();
             redraw = false;
         }
     }
-
-	// state = SERVING;
-	state = GAMEOVER;
 }
 
 
 void stateGameOver()
 {
-	state = SERVING;
-	state = ENDGAME;
+    bool redraw  = true;
+    bool done    = false;
+    ALLEGRO_EVENT event;
+
+
+    VET_SCORE_T *highScores = initHudGameOver();
+
+    char str[10]; 
+    strcpy(str, "");
+
+	for(;;)
+    {
+        al_wait_for_event(queue, &event);
+
+        switch(event.type)
+        {
+            case ALLEGRO_EVENT_TIMER:
+                redraw = true;
+                break;
+
+            case ALLEGRO_EVENT_KEY_CHAR:
+                if (event.keyboard.keycode == ALLEGRO_KEY_ESCAPE)
+                {
+                    state = ENDGAME;
+                    done  = true;
+                }
+                
+                if (event.keyboard.keycode == ALLEGRO_KEY_ENTER)
+                {
+                    state = SERVING;
+                    done  = true;
+                }
+                else if (strlen(str) <= 13){
+                    //  INICIO DO CODIGO RETIRADO DE https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
+                    //  o codigo verifica se o teclado escreveu uma caractere utilizavel
+                    char temp[] = {event.keyboard.unichar, '\0'};
+                    
+                    if (event.keyboard.unichar >= '0' 
+                        && event.keyboard.unichar <= '9')
+                    {
+                        strcat(str, temp);
+                    }
+                    else if (event.keyboard.unichar >= 'A' 
+                        && event.keyboard.unichar <= 'Z')
+                    {
+                        strcat(str, temp);
+                    }
+                    else if (event.keyboard.unichar >= 'a' 
+                        && event.keyboard.unichar <= 'z')
+                    {
+                        strcat(str, temp);
+                    }
+                }
+                //FIM DO CODIGO RETIRADO 
+                redraw = true;
+                break;
+
+            case ALLEGRO_EVENT_DISPLAY_CLOSE:
+                state = ENDGAME;
+                done  = true;
+                break;
+        }
+
+        if(done)
+            break;
+
+        updateKeyboard(&event);
+
+        if(redraw && al_is_event_queue_empty(queue))
+        {
+            // redesenha as coisas da tela
+            displayPreDraw();
+            al_clear_to_color(al_map_rgb(0, 0, 0));
+
+            drawHudGameOver(highScores, str);
+
+            displayPostDraw();
+            redraw = false;
+        }
+    }
+
+    deinitHudGameOver(highScores, str);
 }
 
 
 void stateCloseGame()
 {
-	// al_destroy_audio_stream(music);
-    // al_destroy_sample(elephant);
+    deinitAudio();
+    deinitEnemies();
+    deinitTank();
     deinitSprites();
-    deinitFont();
+    deinitHud();
     destroyDisplay();
     destroyTimer();
     destroyQueue();

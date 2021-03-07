@@ -5,22 +5,31 @@
 #include "lib-game-states.h"
 #include "utils.h"
 
-// #define TANK_SPEED 2
-// #define TANK_MAX_X (BUFFER_W - TANK_W)
-// #define TANK_MAX_Y (BUFFER_H - TANK_H)
+#define ENEMY_N 20
+#define TIME_MOVEMENT 100
 
-// typedef struct PLAYER_T 
-// {
-// 	int x, y;
-//     DIRECTIONS direction;
-//     int shotTimer;
-//     int lives;
-//     int respawnTimer;
-//     int invincibleTimer;
-// } PLAYER_T;
+typedef struct ENEMY_T
+{
+    int x, y;
+	DIRECTIONS direction;
+    int shotTimer;
+    bool alive;
+    bool used;
+} ENEMY_T;
 
-// void initTank();
-// void updateTank();
-// void drawTank();
+extern ENEMY_T *enemies;
+
+// 
+void initEnemies();
+
+// 
+void updateEnemies();
+
+// 
+void drawEnemies();
+
+// 
+void deinitEnemies();
+
 
 #endif
