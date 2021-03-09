@@ -37,7 +37,6 @@ void updateEnemies()
                     new_x -= (GAME_LIMIT_W - 60);
 
 				enemies[i].direction = between(0, DIRECTIONS_N - 1);
-                enemies[i].shotTimer = between(1, SHOT_TIMER);
                 enemies[i].used      = true;
                 enemies[i].x         = new_x;
                 enemies[i].y         = between(0, 32);
@@ -49,24 +48,32 @@ void updateEnemies()
 
         if (enemies[i].alive)
         {
-            if (between(0, 1000) < TIME_MOVEMENT)
+            if (between(0, 10000) < TIME_MOVEMENT)
                 enemies[i].direction = between(0, DIRECTIONS_N - 1);
 
             if (enemies[i].direction == UP)
             {
                 enemies[i].y -= TANK_SPEED;
+                if (enemies[i].y < 0)
+                    enemies[i].y = 0;
             }
             if (enemies[i].direction == DOWN)
             {
                 enemies[i].y += TANK_SPEED;
+                if (enemies[i].y > TANK_MAX_Y)
+                    enemies[i].y = TANK_MAX_Y;
             }
             if (enemies[i].direction == LEFT)
             {
                 enemies[i].x -= TANK_SPEED;
+                if (enemies[i].x < 0)
+                    enemies[i].x = 0;
             }
             if (enemies[i].direction == RIGHT)
             {
                 enemies[i].x += TANK_SPEED;
+                if (enemies[i].x > TANK_MAX_X)
+                    enemies[i].x = TANK_MAX_X;
             }
 
             if(enemies[i].y >= BUFFER_H)
@@ -85,16 +92,14 @@ void updateEnemies()
                 
                 score += 200;
 
-                // fx_add(false, cx, cy);
+                addFX(false, cx, cy);
 
                 continue;
             }
 
-            enemies[i].shotTimer--;
-            if(!enemies[i].shotTimer)
+            if(between(0, 10000) < SHOT_TIMER)
             {
                 addShots(false, false, cx, cy, enemies[i].direction);
-                enemies[i].shotTimer = SHOT_TIMER;
             }
         }
     }

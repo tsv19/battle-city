@@ -2,141 +2,151 @@
 #ifndef __LIB_GAME_STATES__
 #define __LIB_GAME_STATES__
 
-#include "player.h"
+#include "utils.h"
 #include "enemy.h"
-
-
-/* =============================== define's ================================= */
-
-// display stuffs
-#define BUFFER_W 320
-#define BUFFER_H 240
-#define DISPLAY_SCALE 3
-#define DISPLAY_W (BUFFER_W * DISPLAY_SCALE)
-#define DISPLAY_H (BUFFER_H * DISPLAY_SCALE)
-#define GAME_LIMIT_W (BUFFER_W - 48) 
-#define GAME_LIMIT_H (BUFFER_H) 
-
-// keybord stuffs
-#define KEY_SEEN     1
-#define KEY_RELEASED 2
-
-// sprites stuffs
-#define BLOCKS 8
-
-// shot stuffs
-#define SHOTS_N 128
-#define SHOT_W 3
-#define SHOT_H 4
-#define SHOT_SPEED 3
-#define SHOT_TIMER 50
-
-
-/* ================================ typedef's =============================== */
-
-typedef struct SPRITES_T
-{
-    ALLEGRO_BITMAP* sheet;
-    ALLEGRO_BITMAP* tank[DIRECTIONS_N];
-    ALLEGRO_BITMAP* shot[DIRECTIONS_N];
-    ALLEGRO_BITMAP* enemies[DIRECTIONS_N];
-    ALLEGRO_BITMAP* life;
-    ALLEGRO_BITMAP* brickWall;
-    ALLEGRO_BITMAP* steelWall;
-    ALLEGRO_BITMAP* water;
-    ALLEGRO_BITMAP* tree;
-    ALLEGRO_BITMAP* contour;
-} SPRITES_T;
-
-typedef struct SHOT_T
-{
-    int x, y;
-    DIRECTIONS direction;
-    int frame;
-    bool player;
-    bool used;
-} SHOT_T;
-
-// map stuffs
-typedef struct MAP_T
-{
-    int line, column;
-    int **matrix;
-} MAP_T;
-
-typedef struct VET_SCORE_T
-{
-    char name[10];
-    long score;
-} VET_SCORE_T;
+#include "player.h"
 
 
 /* ================================= extern's =============================== */
 
-// variaveis globais externalizadas 
+extern ALLEGRO_FONT            	*font;
+extern STATE_GAME               state;
+extern long                     score;
+extern long                     frames;
 extern ALLEGRO_TIMER           	*timer;
 extern ALLEGRO_EVENT_QUEUE     	*queue;
-extern ALLEGRO_DISPLAY         	*display;
+extern SHOT_T                   *shots;
 extern ALLEGRO_BITMAP			*buffer;
-extern ALLEGRO_FONT            	*font;
+extern ALLEGRO_DISPLAY         	*display;
 extern SPRITES_T                *sprites;
 extern unsigned char            key[ALLEGRO_KEY_MAX];
-extern SHOT_T                   *shots;
-extern MAP_T                    *map;
 
 
 /* ============================== header functions ========================== */
 
-// display stuffs
+// faz a inicializacao do display
 void createDisplay();
+
+// desabilita o display
 void destroyDisplay();
+
+// configuracoes do display antes do desenho.
+// torna o buffer alvo dos desenhos
 void displayPreDraw();
+
+// configuracoes do display apos o desenho ser feito no buffer.
+// torna o display alvo e faz a escala do desenho feito no buffer para o display
 void displayPostDraw();
 
-// keybord stuffs
+// inicializa teclado para receber dados
 void initKeyboard();
+
+// atualiza dados vindo do teclado
 void updateKeyboard(ALLEGRO_EVENT *event);
 
-// sprites stuffs
+// inicializa os sprites do jogo
 void initSprites();
-ALLEGRO_BITMAP *grabSprite(int x, int y, int w, int h);
+
+// pega os sprites de um spritesheet e os coloca em variaveis
+ALLEGRO_BITMAP *grabSprite(ALLEGRO_BITMAP *sheet, int x, int y, int w, int h);
+
+// desabilita os sprites do jogo
 void deinitSprites();
 
-// timer stuffs
+// inicializa o timer do jogo
 void createTimer();
+
+// desabilita o timer do jogo
 void destroyTimer();
 
-// queue stuffs
+// inicializa a fila de eventos
 void createQueue();
+
+// desabilita a fila de eventos
 void destroyQueue();
 
-// audio stuffs
+// inicializa os audios do jogo 
 void initAudio();
-void createAudio(ALLEGRO_SAMPLE *audio, char *name);
+
+// desabilita audios do jogo
 void deinitAudio();
 
-// shots stuffs
+// inicializa variaveis de controle dos tiros do jogo
 void initShots();
+
+// adiciona os tiros em um vetor caso haja disparo
 bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction);
+
+// atualiza os tiros que estao em tela
 void updateShots();
+
+// confere a colisoe dos tiros com os elementos do jogo
 bool collideShots(bool player, int x, int y, int w, int h);
+
+// desenha na tela os tiros
 void drawShots();
+
+// desabilita os tiros do jogo
 void deinitShots();
 
-// hud
+// inicializa o hud do jogo
 void initHud();
-void deinitHud();
+
+// atualiza os pontos no hud do jogo
 void updateHud();
+
+// desenha na tela o hud
 void drawHud();
 
-// hud game over 
-VET_SCORE_T *initHudGameOver();
-void drawHudGameOver(VET_SCORE_T *highScores, char *str);
-void deinitHudGameOver(VET_SCORE_T *highScores, char *str);
+// desabilita o hud
+void deinitHud();
 
-//create walls stuffs
-MAP_T * initMap();
-void drawWalls(MAP_T *map);
+// inicializa a tela de game over 
+void initScreenGameOver();
 
+// desenha a tela de game over
+void drawScreenGameOver(char *str);
+
+// desabilita a tela de game over
+void deinitScreenGameOver(char *str);
+
+// inicializa o mapa do jogo com base em um arquivo "map.dat"
+void initMap();
+
+// cria as barreiras do jogo com base no arquivo lido
+void createWalls();
+
+// desenha as barreiras do jogo na tela
+void drawWalls();
+
+// desabilita o mapa
+void deinitMap();
+
+// configuracoes da tela de ajuda
+void helpScreen();
+
+// configuracoes da tela de creditos
+void creditScreen();
+
+// checa se o easter egg foi descoberto
+bool checkIfEasterEgg(char *str);
+
+// desenha easter egg do menu
+void drawEasterEgg();
+
+// inicializa os "efeitos especiais"
+void initFX();
+
+// adiciona explosao em um vetor caso haja destruicao de inimigo
+void addFX(bool spark, int x, int y);
+
+// atualiza o andamento da explosao
+void updateFX();
+
+// desenha a explosao
+void drawFX();
+
+// desabilita as explosoes
+void deinitFX(); 
 
 #endif

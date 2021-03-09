@@ -1,6 +1,7 @@
 
 #include "game-states.h"
 
+// lib-game-states
 STATE_GAME              state;
 ALLEGRO_TIMER           *timer;
 ALLEGRO_EVENT_QUEUE     *queue;
@@ -8,9 +9,9 @@ ALLEGRO_DISPLAY         *display;
 ALLEGRO_BITMAP			*buffer;
 ALLEGRO_FONT            *font;
 unsigned char           key[ALLEGRO_KEY_MAX];
-long score;
-long frames;
-MAP_T                   *map;
+long                    score;
+long                    frames;
+
 
 void stateInit()
 {
@@ -31,8 +32,13 @@ void stateInit()
     al_register_event_source(queue, al_get_display_event_source(display));
     al_register_event_source(queue, al_get_timer_event_source(timer));
 
-    bool done   = false;
-    bool redraw = true;
+    char str[1024];
+    strcpy(str, "");
+
+    bool done      = false;
+    bool redraw    = true;
+	bool help      = false;
+	bool credits   = false;
     ALLEGRO_EVENT event;
 
     al_start_timer(timer);    
@@ -54,6 +60,52 @@ void stateInit()
                     done  = true;
                 }
 
+                redraw = true;
+                break;
+
+            case ALLEGRO_EVENT_KEY_CHAR:
+                if (event.keyboard.keycode == ALLEGRO_KEY_H 
+                    || event.keyboard.keycode == ALLEGRO_KEY_F11)
+                {
+                    help = !help;
+                }
+
+                if (event.keyboard.keycode == ALLEGRO_KEY_C)
+                {
+                    credits = !credits;
+                }
+                else if (strlen(str) < 1024)
+                {
+                    // INICIO DO CODIGO RETIRADO 
+                    // DE https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
+                    // o codigo verifica se o teclado escreveu uma caractere utilizavel
+
+                    if (strlen(str) == 1023)
+                    {
+                        strcpy(str, "");
+                    }
+
+                    char temp[] = {event.keyboard.unichar, '\0'};
+                    
+                    if (event.keyboard.unichar >= '0' 
+                        && event.keyboard.unichar <= '9')
+                    {
+                        strcat(str, temp);
+                    }
+                    else if (event.keyboard.unichar >= 'A' 
+                        && event.keyboard.unichar <= 'Z')
+                    {
+                        strcat(str, temp);
+                    }
+                    else if (event.keyboard.unichar >= 'a' 
+                        && event.keyboard.unichar <= 'z')
+                    {
+                        strcat(str, temp);
+                    }
+                }
+                //FIM DO CODIGO RETIRADO
+
+                redraw = true;
                 break;
 
             case ALLEGRO_EVENT_DISPLAY_CLOSE:
@@ -69,18 +121,40 @@ void stateInit()
 
         if(redraw && al_is_event_queue_empty(queue))
         {
-            // redesenha as coisas da tela
             displayPreDraw();
-
             al_clear_to_color(al_map_rgb(0, 0, 0));
-            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/3, 
-            ALLEGRO_ALIGN_CENTER, "BATTLE CITY");
-
-            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/2, 
-            ALLEGRO_ALIGN_CENTER, "PLAY [ENTER]");
             
-            al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, BUFFER_H/2 + 20, 
-            ALLEGRO_ALIGN_CENTER, "HELP [H]");
+
+            if (!help && !credits)
+            {
+                if (checkIfEasterEgg(str))
+                {
+                    drawEasterEgg();
+                }
+
+                al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
+                            BUFFER_H/3, ALLEGRO_ALIGN_CENTER, "BATTLE CITY");
+
+                al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
+                            BUFFER_H/2, ALLEGRO_ALIGN_CENTER, "PLAY [ENTER]");
+                
+                al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
+                            BUFFER_H/2 + 20, ALLEGRO_ALIGN_CENTER, "HELP [H][F1]");
+
+                al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
+                            BUFFER_H/2 + 40, ALLEGRO_ALIGN_CENTER, "CREDITS [C]");
+
+                al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
+                            BUFFER_H/2 + 60, ALLEGRO_ALIGN_CENTER, "EXIT [ESC]");
+            }
+            else if (help)
+            {
+                helpScreen();
+            }
+            else if (credits)
+            {
+                creditScreen();
+            }
 
             displayPostDraw();
             redraw = false;
@@ -92,7 +166,8 @@ void stateInit()
 void stateServe()
 {
     score = 0;
-    map = initMap();
+    initMap();
+    initFX();
     initTank();
     initEnemies();
     initShots();
@@ -114,6 +189,8 @@ void statePlay()
         {
             case ALLEGRO_EVENT_TIMER:
                 // faz update das coisas, posicoes etc
+                // updateWalls();
+                updateFX();
                 updateTank();
                 updateEnemies();
                 updateShots();
@@ -146,7 +223,8 @@ void statePlay()
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            drawWalls(map);
+            drawWalls();
+            drawFX();
             drawTank();
             drawEnemies();
             drawShots();
@@ -166,7 +244,7 @@ void stateGameOver()
     ALLEGRO_EVENT event;
 
 
-    VET_SCORE_T *highScores = initHudGameOver();
+    initScreenGameOver();
 
     char str[10]; 
     strcpy(str, "");
@@ -193,7 +271,8 @@ void stateGameOver()
                     state = SERVING;
                     done  = true;
                 }
-                else if (strlen(str) <= 13){
+                else if (strlen(str) < 10)
+                {
                     //  INICIO DO CODIGO RETIRADO DE https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
                     //  o codigo verifica se o teclado escreveu uma caractere utilizavel
                     char temp[] = {event.keyboard.unichar, '\0'};
@@ -214,7 +293,8 @@ void stateGameOver()
                         strcat(str, temp);
                     }
                 }
-                //FIM DO CODIGO RETIRADO 
+                //FIM DO CODIGO RETIRADO
+
                 redraw = true;
                 break;
 
@@ -235,14 +315,15 @@ void stateGameOver()
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            drawHudGameOver(highScores, str);
+            drawScreenGameOver(str);
 
             displayPostDraw();
             redraw = false;
         }
     }
 
-    deinitHudGameOver(highScores, str);
+    deinitScreenGameOver(str);
+    deinitMap();
 }
 
 
@@ -250,6 +331,7 @@ void stateCloseGame()
 {
     deinitAudio();
     deinitEnemies();
+    deinitFX();
     deinitTank();
     deinitSprites();
     deinitHud();

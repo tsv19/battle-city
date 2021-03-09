@@ -1,27 +1,27 @@
 
 #include "lib-game-states.h"
 
-// variaveis globais externalizadas
-ALLEGRO_TIMER           *timer;
-ALLEGRO_EVENT_QUEUE     *queue;
-ALLEGRO_DISPLAY         *display;
-ALLEGRO_BITMAP			*buffer;
-ALLEGRO_FONT            *font;
-SPRITES_T               *sprites;
-PLAYER_T                *tank;
-unsigned char           key[ALLEGRO_KEY_MAX];
-SHOT_T                  *shots;
+// lib-game-states
+FX                      *fx;
 MAP_T                   *map;
-
+ALLEGRO_FONT            *font;
+PLAYER_T                *tank;
+ALLEGRO_TIMER           *timer;
+SHOT_T                  *shots;
+ALLEGRO_EVENT_QUEUE     *queue;
+ALLEGRO_BITMAP			*buffer;
+long                    **walls;
+ALLEGRO_DISPLAY         *display;
+SPRITES_T               *sprites;
+long                    scoreHud;
+bool                    easterEgg;
+VET_SCORE_T             *highScores;
 ALLEGRO_SAMPLE          *sampleShot;
-ALLEGRO_SAMPLE          *sampleExplode[2];
-
-// variaveis globais
-long score_display;
-
-
+ALLEGRO_SAMPLE          *sampleExplode;
+unsigned char           key[ALLEGRO_KEY_MAX];
 
 /* ================================ display ==================================*/
+
 void createDisplay()
 {
 	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
@@ -40,10 +40,12 @@ void destroyDisplay()
     al_destroy_display(display);
 }
 
+
 void displayPreDraw()
 {
     al_set_target_bitmap(buffer);
 }
+
 
 void displayPostDraw()
 {
@@ -56,10 +58,12 @@ void displayPostDraw()
 
 
 /* ================================ keybord ==================================*/
+
 void initKeyboard()
 {
     memset(key, 0, sizeof(key));
 }
+
 
 void updateKeyboard(ALLEGRO_EVENT *event)
 {
@@ -81,85 +85,130 @@ void updateKeyboard(ALLEGRO_EVENT *event)
 
 
 /* ================================ sprites ==================================*/
+
 void initSprites()
 {
     if (!sprites)
     {
         sprites = malloc(sizeof(SPRITES_T));
-        mustInit(sprites, "sprites");
+        mustInit(sprites, "sprites variable");
     }
 
     sprites->sheet = al_load_bitmap("./resources/spritesheet.png");
-    mustInit(sprites->sheet, "spritesheet");
+    mustInit(sprites->sheet, "spritesheet battle city");
 
-    sprites->tank[UP]        = grabSprite(  0, 128, TANK_W, TANK_H);
-    sprites->tank[DOWN]      = grabSprite( 64, 128, TANK_W, TANK_H);
-    sprites->tank[LEFT]      = grabSprite( 32, 128, TANK_W, TANK_H);
-    sprites->tank[RIGHT]     = grabSprite( 96, 128, TANK_W, TANK_H);
+    sprites->sheetEasterEgg1 = al_load_bitmap("./resources/spritesheet2.png");
+    mustInit(sprites->sheetEasterEgg1, "spritesheet DK");
 
-    sprites->life            = grabSprite(  0, 128, TANK_W, TANK_H);
+    sprites->sheetEasterEgg2 = al_load_bitmap("./resources/spritesheet3.png");
+    mustInit(sprites->sheetEasterEgg2, "spritesheet banana");
 
-    sprites->shot[UP]        = grabSprite(323, 102, SHOT_W, SHOT_H);
-    sprites->shot[DOWN]      = grabSprite(339, 102, SHOT_W, SHOT_H);
-    sprites->shot[LEFT]      = grabSprite(330, 102, SHOT_H, SHOT_W);
-    sprites->shot[RIGHT]     = grabSprite(346, 102, SHOT_H, SHOT_W);
+    sprites->tank[UP]    = grabSprite(sprites->sheet,   0, 128, TANK_W, TANK_H);
+    sprites->tank[DOWN]  = grabSprite(sprites->sheet,  64, 128, TANK_W, TANK_H);
+    sprites->tank[LEFT]  = grabSprite(sprites->sheet,  32, 128, TANK_W, TANK_H);
+    sprites->tank[RIGHT] = grabSprite(sprites->sheet,  96, 128, TANK_W, TANK_H);
 
-    sprites->enemies[UP]     = grabSprite(128, 144, TANK_W, TANK_H);
-    sprites->enemies[DOWN]   = grabSprite(192, 144, TANK_W, TANK_H);
-    sprites->enemies[LEFT]   = grabSprite(160, 144, TANK_W, TANK_H);
-    sprites->enemies[RIGHT]  = grabSprite(224, 144, TANK_W, TANK_H);
+    sprites->life = grabSprite(sprites->sheet,   0, 128, TANK_W, TANK_H);
+
+    sprites->shot[UP]    = grabSprite(sprites->sheet, 323, 102, SHOT_W, SHOT_H);
+    sprites->shot[DOWN]  = grabSprite(sprites->sheet, 339, 102, SHOT_W, SHOT_H);
+    sprites->shot[LEFT]  = grabSprite(sprites->sheet, 330, 102, SHOT_H, SHOT_W);
+    sprites->shot[RIGHT] = grabSprite(sprites->sheet, 346, 102, SHOT_H, SHOT_W);
+
+    sprites->bananaShots[UP]    = grabSprite(sprites->sheet, 322,  85, BANANA_W, BANANA_H);
+    sprites->bananaShots[DOWN]  = grabSprite(sprites->sheet, 338,  85, BANANA_W, BANANA_H);
+    sprites->bananaShots[LEFT]  = grabSprite(sprites->sheet, 330,  85, BANANA_W, BANANA_W);
+    sprites->bananaShots[RIGHT] = grabSprite(sprites->sheet, 346,  85, BANANA_W, BANANA_W);
+
+    sprites->enemies[UP]    = grabSprite(sprites->sheet, 128, 144, TANK_W, TANK_H);
+    sprites->enemies[DOWN]  = grabSprite(sprites->sheet, 192, 144, TANK_W, TANK_H);
+    sprites->enemies[LEFT]  = grabSprite(sprites->sheet, 160, 144, TANK_W, TANK_H);
+    sprites->enemies[RIGHT] = grabSprite(sprites->sheet, 224, 144, TANK_W, TANK_H);
  
-    sprites->brickWall       = grabSprite(256,  64, BLOCKS, BLOCKS);
-    sprites->steelWall       = grabSprite(256,  72, BLOCKS, BLOCKS);
-    sprites->water           = grabSprite(256,  80, BLOCKS, BLOCKS);
-    sprites->tree            = grabSprite(265,  72, BLOCKS, BLOCKS);
-    sprites->contour         = grabSprite(265, 272, BLOCKS, BLOCKS);
+    sprites->block[BRICK]   = grabSprite(sprites->sheet, 256,  64, SIZE_BLOCKS, SIZE_BLOCKS);
+    sprites->block[STEEL]   = grabSprite(sprites->sheet, 256,  72, SIZE_BLOCKS, SIZE_BLOCKS);
+    sprites->block[WATER]   = grabSprite(sprites->sheet, 264,  80, SIZE_BLOCKS, SIZE_BLOCKS);
+    sprites->block[TREE]    = grabSprite(sprites->sheet, 264,  72, SIZE_BLOCKS, SIZE_BLOCKS);
+    sprites->block[CONTOUR] = grabSprite(sprites->sheet, 272,  72, SIZE_BLOCKS, SIZE_BLOCKS);
+
+    sprites->sparks[0] = grabSprite(sprites->sheet, 259, 130, 10, 11);
+    sprites->sparks[1] = grabSprite(sprites->sheet, 272, 129, 15, 15);
+    sprites->sparks[2] = grabSprite(sprites->sheet, 288, 128, 16, 16);
+
+    sprites->explosion[0]    = grabSprite(sprites->sheet,   304, 129, 31, 30);
+    sprites->explosion[1]    = grabSprite(sprites->sheet,   335, 128, 32, 32);
+
+    sprites->DK     = grabSprite(sprites->sheetEasterEgg1,   0, 0, 63, 56);
+    sprites->banana = grabSprite(sprites->sheetEasterEgg2,   0, 0, 30, 31);
 }
 
-ALLEGRO_BITMAP *grabSprite(int x, int y, int w, int h)
+
+ALLEGRO_BITMAP *grabSprite(ALLEGRO_BITMAP *sheet, int x, int y, int w, int h)
 {
-    ALLEGRO_BITMAP *sprite = al_create_sub_bitmap(sprites->sheet, x, y, w, h);
+    ALLEGRO_BITMAP *sprite = al_create_sub_bitmap(sheet, x, y, w, h);
     mustInit(sprite, "sprite grab");
     return sprite;
 }
 
+
 void deinitSprites()
 {
-    al_destroy_bitmap(sprites->tank[RIGHT]);
-    al_destroy_bitmap(sprites->tank[LEFT]);
-    al_destroy_bitmap(sprites->tank[DOWN]);
-    al_destroy_bitmap(sprites->tank[UP]);
+    for (int i = 0; i < DIRECTIONS_N; i++)
+    {
+        al_destroy_bitmap(sprites->tank[i]);
+    }
 
     al_destroy_bitmap(sprites->life);
 
-    al_destroy_bitmap(sprites->shot[RIGHT]);
-    al_destroy_bitmap(sprites->shot[LEFT]);
-    al_destroy_bitmap(sprites->shot[DOWN]);
-    al_destroy_bitmap(sprites->shot[UP]);
+    for (int i = 0; i < DIRECTIONS_N; i++)
+    {
+        al_destroy_bitmap(sprites->shot[i]);
+    }
+    
+    for (int i = 0; i < DIRECTIONS_N; i++)
+    {
+        al_destroy_bitmap(sprites->enemies[i]);
+    }
 
-    al_destroy_bitmap(sprites->enemies[RIGHT]);
-    al_destroy_bitmap(sprites->enemies[LEFT]);
-    al_destroy_bitmap(sprites->enemies[DOWN]);
-    al_destroy_bitmap(sprites->enemies[UP]);
+    for (int i = 0; i < DIRECTIONS_N; i++)
+    {
+        al_destroy_bitmap(sprites->bananaShots[i]);
+    }
+    
+    for (int i = 0; i < BLOCK_N; i++)
+    {
+        al_destroy_bitmap(sprites->block[i]);
+    }
 
-    al_destroy_bitmap(sprites->brickWall);
-    al_destroy_bitmap(sprites->steelWall);
-    al_destroy_bitmap(sprites->water);
-    al_destroy_bitmap(sprites->tree);
-    al_destroy_bitmap(sprites->contour);
+    for (int i = 0; i < SPARKS_FRAMES; i++)
+    {
+        al_destroy_bitmap(sprites->sparks[i]);
+    }
+
+    for (int i = 0; i < EXPLOSION_FRAMES; i++)
+    {
+        al_destroy_bitmap(sprites->explosion[i]);
+    }
+
+    al_destroy_bitmap(sprites->DK);
+    al_destroy_bitmap(sprites->banana);
 
     al_destroy_bitmap(sprites->sheet);
+    al_destroy_bitmap(sprites->sheetEasterEgg1);
+    al_destroy_bitmap(sprites->sheetEasterEgg2);
 
-    // free(sprites);
+    free(sprites);
 }
 
 
 /* ================================= timer ===================================*/
+
 void createTimer()
 {
 	timer = al_create_timer(1.0 / 60.0);
     mustInit(timer, "timer");
 }
+
 
 void destroyTimer()
 {
@@ -168,11 +217,13 @@ void destroyTimer()
 
 
 /* ================================= queue ===================================*/
+
 void createQueue()
 {
 	queue = al_create_event_queue();
     mustInit(queue, "queue");
 }
+
 
 void destroyQueue()
 {
@@ -181,6 +232,7 @@ void destroyQueue()
 
 
 /* ================================= audio ===================================*/
+
 void initAudio()
 {
 	mustInit(al_install_audio(), "audio");
@@ -190,28 +242,20 @@ void initAudio()
     sampleShot = al_load_sample("./resources/shot.wav");
     mustInit(sampleShot, "shot sample");
 
-    // sampleExplode[0] = al_load_sample("./resources/explode1.wav");
-    // mustInit(sampleExplode[0], "explode sample 1");
+    sampleExplode = al_load_sample("./resources/explode.wav");
+    mustInit(sampleExplode, "explode sample");
     
-    // sampleExplode[1] = al_load_sample("./resources/explode2.wav");
-    // mustInit(sampleExplode[1], "explode sample 2");
-}
-
-void createAudio(ALLEGRO_SAMPLE *audio, char *name)
-{
-	audio = al_load_sample(name);
-    mustInit(audio, "elephant");
 }
 
 void deinitAudio()
 {
     al_destroy_sample(sampleShot);
-    // al_destroy_sample(sampleExplode[0]);
-    // al_destroy_sample(explodeSample[1]);
+    al_destroy_sample(sampleExplode);
 } 
 
 
 /* ================================= shots ===================================*/
+
 void initShots()
 {
     if (!shots)
@@ -224,10 +268,11 @@ void initShots()
         shots[i].used = false;
 }
 
+
 bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
 {
-    al_play_sample(sampleShot, 0.3, 0, player ? 1.0 : betweenF(1.5, 1.6), 
-    ALLEGRO_PLAYMODE_ONCE, NULL);
+    al_play_sample(sampleShot, 0.1, 0, player ? 1.0 : betweenF(1.5, 1.6), 
+                    ALLEGRO_PLAYMODE_ONCE, NULL);
 
     for(int i = 0; i < SHOTS_N; i++)
     {
@@ -297,6 +342,7 @@ bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
     return false;
 }
 
+
 void updateShots()
 {
     for(int i = 0; i < SHOTS_N; i++)
@@ -326,6 +372,7 @@ void updateShots()
     }
 }
 
+
 bool collideShots(bool player, int x, int y, int w, int h)
 {
     for(int i = 0; i < SHOTS_N; i++)
@@ -338,20 +385,21 @@ bool collideShots(bool player, int x, int y, int w, int h)
             continue;
 
         int sw, sh;
-        if(player)
+        
+        if (!easterEgg)
         {
             sw = SHOT_W;
             sh = SHOT_H;
         }
-        else
         {
-            sw = SHOT_W;
-            sh = SHOT_H;
+            sw = BANANA_W;
+            sh = BANANA_H;
         }
 
         if(collide(x, y, x+w, y+h, shots[i].x, shots[i].y, shots[i].x+sw, shots[i].y+sh))
         {
-            // fx_add(true, shots[i].x + (sw / 2), shots[i].y + (sh / 2));
+            addFX(true, shots[i].x + (sw / 2), shots[i].y + (sh / 2));
+
             shots[i].used = false;
             return true;
         }
@@ -359,6 +407,7 @@ bool collideShots(bool player, int x, int y, int w, int h)
 
     return false;
 }
+
 
 void drawShots()
 {
@@ -371,19 +420,36 @@ void drawShots()
 
         if(shots[i].player)
         {
+            if (easterEgg)
+            {
+                al_draw_bitmap(sprites->bananaShots[shots[i].direction], shots[i].x, 
+                            shots[i].y, 0);
+            }
+            else
+            {
             al_draw_bitmap(sprites->shot[shots[i].direction], shots[i].x, 
                         shots[i].y, 0);
+            }
         }    
         else // enemy
         {
             ALLEGRO_COLOR tint = frame_display 
                         ? al_map_rgb_f(1, 1, 1) : al_map_rgb_f(0.5, 0.5, 0.5);
 
-            al_draw_tinted_bitmap(sprites->shot[shots[i].direction], tint, 
+            if (easterEgg)
+            {
+                al_draw_tinted_bitmap(sprites->bananaShots[shots[i].direction], tint, 
                                 shots[i].x, shots[i].y, 0);
+            }
+            else
+            {
+                al_draw_tinted_bitmap(sprites->shot[shots[i].direction], tint, 
+                                shots[i].x, shots[i].y, 0);
+            }
         }
     }
 }
+
 
 void deinitShots(){
     free(shots);
@@ -391,6 +457,7 @@ void deinitShots(){
 
 
 /* ================================== hud  ===================================*/
+
 void initHud()
 {
     font = al_create_builtin_font();
@@ -398,10 +465,12 @@ void initHud()
     score = 0;
 }
 
+
 void deinitHud()
 {
     al_destroy_font(font);
 }
+
 
 void updateHud()
 {
@@ -411,42 +480,44 @@ void updateHud()
     for(long i = 5; i > 0; i--)
     {
         long diff = 1 << i;
-        if(score_display <= (score - diff))
-            score_display += diff;
+        if(scoreHud <= (score - diff))
+            scoreHud += diff;
     }
 }
 
+
 void drawHud()
 {
-    al_draw_textf(font, al_map_rgb_f(1,1,1), BUFFER_W - 50, 1, 0, "%06ld", score);
+    al_draw_text(font, al_map_rgb_f(1,1,1), BUFFER_W - 50, 4, 0, "SCORE");
+    al_draw_textf(font, al_map_rgb_f(1,1,1), BUFFER_W - 50, 14, 0, "%06ld", score);
 
     int spacing = TANK_W + 1;
     for(int i = 0; i < tank->lives; i++)
     {
-        al_draw_bitmap(sprites->life, (BUFFER_W - 50) + (i * spacing), 10, 0);
+        al_draw_bitmap(sprites->life, (BUFFER_W - 50) + (i * spacing), 24, 0);
     }
 
 }
 
-/* ============================== hud game over ==============================*/
-VET_SCORE_T *initHudGameOver()
+/* =========================== screen game over ==============================*/
+
+void initScreenGameOver()
 {
     FILE* scores = fopen("./resources/highscores.txt", "r");
     mustInit(scores, "file of high scores");
     
-    VET_SCORE_T *highScores = (VET_SCORE_T *) malloc(11 * sizeof(VET_SCORE_T));    
+    highScores = (VET_SCORE_T *)malloc(11 * sizeof(VET_SCORE_T));    
     mustInit(highScores, "High Scores");
-
     for(int i = 0; i < 10; i++)
     { 
         fscanf(scores, "%s %li", highScores[i].name, &highScores[i].score);
     }
 
     fclose(scores);
-    return highScores;
 }
 
-void drawHudGameOver(VET_SCORE_T *highScores, char *str)
+
+void drawScreenGameOver(char *str)
 {
     al_draw_textf(font, al_map_rgb(255,  100,   70), BUFFER_W/2, 3, 
                 ALLEGRO_ALIGN_CENTER, "GAME OVER");
@@ -480,7 +551,8 @@ void drawHudGameOver(VET_SCORE_T *highScores, char *str)
             
 }
 
-void deinitHudGameOver(VET_SCORE_T *highScores, char *str)
+
+void deinitScreenGameOver(char *str)
 {
     if (!strlen(str))
         strcpy(str, "player1");
@@ -512,68 +584,239 @@ void deinitHudGameOver(VET_SCORE_T *highScores, char *str)
     free(highScores);
 }
 
+
 /* ============================== create walls ==============================*/
-MAP_T *initMap()
+
+void initMap()
 {
-    FILE  *mapGame;
-    MAP_T *map;
+    FILE  *mapGame = fopen("./resources/map.dat", "r");
+    mustInit(mapGame, "file map.dat");
+    
+    map = (MAP_T *)malloc(sizeof(MAP_T));
+    mustInit(map, "map variable");
 
-    if (!map)
+    mustInit(fscanf(mapGame, "%d %d", &map->line, &map->column) == 2, "size of map");
+
+    map->matrix = (int **)calloc(map->line, sizeof(int *));
+    mustInit(map, "matrix map");
+
+    for (int i = 0; i < map->line; i++) 
     {
-        map = malloc(sizeof(MAP_T));
-        mustInit(map, "map");
+        map->matrix[i] = (int *)calloc(map->column, sizeof(int));
+        mustInit(map->matrix[i], "line of matrix of map");
     }
-
-    mapGame = fopen("map.dat", "r");
-    if (!mapGame) {
-        printf("Não foi possível abrir o arquivo mapa\n");
-        exit(1);
-    }
-
-    if (fscanf(mapGame, "%d %d", &map->line, &map->column) != 2) {
-        printf("Não foi possível ler o tamanho do mapa\n");
-        exit(1);
-    }
-
-    if (!map->matrix)
-    {
-        map->matrix = malloc(sizeof(int *)*map->line);
-        mustInit(map, "matrix map");
-    }
-
-    for (int i = 0; i < map->line; i++) {
-        if (!map->matrix[i])
-        {
-            map->matrix[i] = malloc(sizeof(int)*map->column);
-            mustInit(map->matrix[i], "line of matrix of map");
-        }
-    }
-
+    
     for (int i = 0; i < map->line; i++) 
     {
         for (int j = 0; j < map->column; j++) 
         {
-            mustInit(fscanf(mapGame, "%d", &map->matrix[i][j]), "map values");
+            mustInit(fscanf(mapGame, "%d", &map->matrix[i][j]) == 1, "map values");
         }
     }
-    
+
     fclose(mapGame);
-    return map;
 }
 
 
-void drawWalls(MAP_T *map)
+void createWalls()
 {
 
+     
+
+    if (!walls)
+    {
+        walls = (int **)calloc(BLOCK_N, sizeof(BLOCK_T*));
+    }
+}
+
+
+void drawWalls()
+{
     for (int i = 0; i < map->line; i++)
     {
-        for (int j = 0; j < map->line; j++)
+        for (int j = 0; j < map->column; j++)
         {
             if (map->matrix[i][j] == 1)
             {
-                al_draw_bitmap(sprites->contour, i * 16, j * 15, 0);
-
+                al_draw_bitmap(sprites->block[CONTOUR], j * 16, i * 16, 0);
             }
         }
     }
+}
+
+
+void deinitMap()
+{
+    free(map);
+}
+
+/* =============================== help screen ============================== */
+
+void helpScreen()
+{
+    al_draw_bitmap(sprites->life, 10, 5, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 12, 0, 
+                "<- This is you");
+    
+    al_draw_bitmap(sprites->enemies[UP], 10, 25, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 32, 0, 
+                "<- This is your enemy");
+
+    al_draw_bitmap(sprites->block[BRICK], 15, 52, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 52, 0, 
+                "<- Can destroy if you shot it");
+
+    al_draw_bitmap(sprites->block[STEEL], 15, 72, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 72, 0, 
+                "<- Can't destroy if you shot it");
+
+    al_draw_bitmap(sprites->block[WATER], 15, 92, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 92, 0, 
+                "<- Water + tank = not cool");
+
+    al_draw_bitmap(sprites->block[TREE], 15, 112, 0);
+    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 112, 0, 
+                "<- Tree + tank = where am I?");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 160, 0, 
+                "* Use the arrow keys to move the tank");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 180, 0, 
+                "* Use the space bar to shot");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 200, 0, 
+                "* Try type \"kong\" in menu and play ;)");
+    
+    al_draw_text(font, al_map_rgb(255, 50, 80), BUFFER_W/2, 220, 
+                ALLEGRO_ALIGN_CENTER, "* To close the help [H][F1]");
+}
+
+/* ============================= credit screen ============================== */
+
+void creditScreen()
+{
+    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 10, 0, 
+                "* Author: Tiago Serique :)");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 30, 0, 
+                "* If you wanna see my face:");
+    
+    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 50, 0, 
+                "Instagram (@tecseit)");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 70, 0, 
+                "GitHub (@tiagoserique)");
+    
+    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 90, 0, 
+                "* Sounds:");
+            
+    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 110, 0, 
+                "www.freesounds.org");
+    
+    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 130, 0, 
+                "* Spritesheets:");
+
+    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 150, 0, 
+                "www.spriters-resource.com");
+
+    al_draw_text(font, al_map_rgb(255, 50, 80), BUFFER_W/2, 220, 
+                ALLEGRO_ALIGN_CENTER, "* To close the credits [C]");
+}
+
+
+/* ============================== easter egg ================================ */
+
+bool checkIfEasterEgg(char *str)
+{
+    if (strstr(str, "kong") != NULL)
+    {
+        return easterEgg = true;
+    }
+
+    return false;
+}
+
+void drawEasterEgg()
+{
+    al_draw_bitmap(sprites->banana, BUFFER_W/1.5 + 30, BUFFER_H/1.5, 0);
+    al_draw_bitmap(    sprites->DK,              30,         20, 0);
+}
+
+
+/* ========================== FX, explosion, etc ============================ */
+
+void initFX()
+{
+    if (!fx)
+    {
+        fx = (FX *)calloc(FX_N, sizeof(FX));
+        mustInit(fx, "FX array");
+    }
+
+    for(int i = 0; i < FX_N; i++)
+    {
+        fx[i].used = false;
+    }
+}
+
+void addFX(bool spark, int x, int y)
+{
+    if (!spark)
+    {
+        al_play_sample(sampleExplode, 0.2, 0.0, 4.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+    }
+
+    for(int i = 0; i < FX_N; i++)
+    {
+        if(fx[i].used)
+            continue;
+
+        fx[i].x     = x;
+        fx[i].y     = y;
+        fx[i].frame = 0;
+        fx[i].spark = 0;
+        fx[i].used  = true;
+        return;
+    }
+}
+
+void updateFX()
+{
+    for(int i = 0; i < FX_N; i++)
+    {
+        if(!fx[i].used)
+            continue;
+
+        fx[i].frame++;
+
+        if( ( !fx[i].spark && ( fx[i].frame == (EXPLOSION_FRAMES * 2) ) )
+            || ( fx[i].spark && ( fx[i].frame == (SPARKS_FRAMES * 2) ) ) )
+        {
+            fx[i].used = false;
+        }
+    }
+}
+
+void drawFX()
+{
+    for(int i = 0; i < FX_N; i++)
+    {
+        if(!fx[i].used)
+            continue;
+
+        int frame_display = fx[i].frame / 2;
+        ALLEGRO_BITMAP* bmp = fx[i].spark
+            ? sprites->sparks[frame_display]
+            : sprites->explosion[frame_display]
+        ;
+
+        int x = fx[i].x - (al_get_bitmap_width(bmp) / 2);
+        int y = fx[i].y - (al_get_bitmap_height(bmp) / 2);
+        al_draw_bitmap(bmp, x, y, 0);
+    }
+}
+
+void deinitFX()
+{
+    free(fx);
 }

@@ -1,10 +1,11 @@
 
 #include "player.h"
 
-PLAYER_T *tank;
-
-// variaveis globais externalizadas
+// lib-game-states
 STATE_GAME state; 
+
+// player
+PLAYER_T *tank;
 
 void initTank()
 {
@@ -33,23 +34,23 @@ void updateTank()
 
     if(key[ALLEGRO_KEY_LEFT])
 	{
-        tank->x         -= TANK_SPEED;
 		tank->direction = LEFT;
+        tank->x         -= TANK_SPEED;
 	}
     if(key[ALLEGRO_KEY_RIGHT])
     {
-	    tank->x         += TANK_SPEED;
 		tank->direction = RIGHT;
+	    tank->x         += TANK_SPEED;
     }
 	if(key[ALLEGRO_KEY_UP])
     {
-	    tank->y         -= TANK_SPEED;
 		tank->direction = UP;
+	    tank->y         -= TANK_SPEED;
     }
 	if(key[ALLEGRO_KEY_DOWN])
     {
-	    tank->y         += TANK_SPEED;
 		tank->direction = DOWN;
+	    tank->y         += TANK_SPEED;
 	}
 
     if(tank->x < 0)
@@ -68,12 +69,9 @@ void updateTank()
     {
         if(collideShots(true, tank->x, tank->y, TANK_W, TANK_H))
         {
-            // int x = tank->x + (TANK_W / 2);
-            // int y = tank->y + (TANK_H / 2);
-            // fx_add(false, x, y);
-            // fx_add(false, x + 4, y + 2);
-            // fx_add(false, x - 2, y - 4);
-            // fx_add(false, x + 1, y - 5);
+            int x = tank->x + (TANK_W / 2);
+            int y = tank->y + (TANK_H / 2);
+            addFX(false, x, y);
 
             tank->lives--;
             if (tank->lives > 0)
@@ -112,12 +110,13 @@ void drawTank()
 
     if(tank->respawnTimer)
         return;
-        
+
     if(((tank->invincibleTimer / 2) % 3) == 1)
         return;
 
     al_draw_bitmap(sprites->tank[tank->direction], tank->x, tank->y, 0);
 }
+
 
 void deinitTank()
 {
