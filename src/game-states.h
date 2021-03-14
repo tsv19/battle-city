@@ -2,7 +2,6 @@
 #ifndef __GAME_STATES__
 #define __GAME_STATES__
 
-#include "utils.h"
 #include "lib-game-states.h"
 
 // estado de inicializacao. realiza as configuracoes iniciais e exibe a 

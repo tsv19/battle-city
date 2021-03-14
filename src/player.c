@@ -1,12 +1,14 @@
 
 #include "player.h"
 
-// lib-game-states
-STATE_GAME state; 
+// lib-game-states varaibles
+STATE_GAME  state; 
 
-// player
+// player variables
 PLAYER_T *tank;
 
+
+// inicializa tank do player
 void initTank()
 {
     if (!tank)
@@ -14,8 +16,8 @@ void initTank()
         tank = (PLAYER_T *)malloc(sizeof(PLAYER_T));
     }
 
-    tank->x = (BUFFER_W / 2) - (TANK_W / 2);
-    tank->y = (BUFFER_H / 2) - (TANK_H / 2);
+    tank->x = TANK_INIT_W;
+    tank->y = TANK_INIT_H;
 	tank->direction = UP;
     tank->shotTimer = 0;
     tank->lives = MAX_LIVES;
@@ -24,50 +26,58 @@ void initTank()
 }
 
 
+// atualiza o tank do player
 void updateTank()
 {
+    // tempo de respawn
     if(tank->respawnTimer)
     {
         tank->respawnTimer--;
         return;
     }
 
-    if(key[ALLEGRO_KEY_LEFT])
+    // checa se a movimentacao para a direcao escolhida eh valida
+    if(key[ALLEGRO_KEY_LEFT] 
+        && !collideControl(tank->x-TANK_SPEED, tank->y, TANK_W-1, TANK_H-1, LEFT)
+    )
 	{
 		tank->direction = LEFT;
         tank->x         -= TANK_SPEED;
 	}
-    if(key[ALLEGRO_KEY_RIGHT])
+    else if (key[ALLEGRO_KEY_RIGHT]  
+        && !collideControl(tank->x+TANK_SPEED, tank->y, TANK_W-1, TANK_H-1, RIGHT)
+    )
     {
 		tank->direction = RIGHT;
 	    tank->x         += TANK_SPEED;
     }
-	if(key[ALLEGRO_KEY_UP])
+	else if (key[ALLEGRO_KEY_UP] 
+        && !collideControl(tank->x, tank->y-TANK_SPEED, TANK_W-1, TANK_H-1, UP)
+    )
     {
 		tank->direction = UP;
 	    tank->y         -= TANK_SPEED;
     }
-	if(key[ALLEGRO_KEY_DOWN])
+	else if (key[ALLEGRO_KEY_DOWN] 
+        && !collideControl(tank->x, tank->y+TANK_SPEED, TANK_W-1, TANK_H-1, DOWN)
+    )
     {
 		tank->direction = DOWN;
 	    tank->y         += TANK_SPEED;
 	}
 
-    if(tank->x < 0)
-        tank->x = 0;
-    if(tank->y < 0)
-        tank->y = 0;
-
-    if(tank->x > TANK_MAX_X)
-        tank->x = TANK_MAX_X;
-    if(tank->y > TANK_MAX_Y)
-        tank->y = TANK_MAX_Y;
+    // checa se a base foi destruida
+    if (collide(tank->x, tank->y, tank->x+TANK_W, tank->y+TANK_H-2, BASE_INIT_W, 
+        BASE_INIT_H+2, BASE_INIT_W+TANK_W, BASE_INIT_H+TANK_H))
+        state = GAMEOVER;
 
     if(tank->invincibleTimer)
         tank->invincibleTimer--;
     else
     {
-        if(collideShots(true, tank->x, tank->y, TANK_W, TANK_H))
+        // checa colisao com tiros e agua
+        if(collideShots(true, false, tank->x, tank->y, TANK_W, TANK_H)
+            || collideWater(tank->x, tank->y, TANK_W - 1, TANK_H - 1))
         {
             int x = tank->x + (TANK_W / 2);
             int y = tank->y + (TANK_H / 2);
@@ -76,12 +86,15 @@ void updateTank()
             tank->lives--;
             if (tank->lives > 0)
             {
-                tank->respawnTimer       = RESPAWN_TIMER;
-                tank->invincibleTimer    = INVINCIBLE_TIMER;
+                tank->x               = TANK_INIT_W;
+                tank->y               = TANK_INIT_H;
+                tank->respawnTimer    = RESPAWN_TIMER;
+                tank->invincibleTimer = INVINCIBLE_TIMER;
             }
         }
     }
 
+    // se tiver vivo, checa se pode atirar
     if (tank->lives > 0)
     {
         if(tank->shotTimer)
@@ -91,7 +104,7 @@ void updateTank()
             int x = tank->x + (TANK_W / 2);
             int y = tank->y + (TANK_H / 2);
             
-            if(addShots(true, false, x, y, tank->direction))
+            if(addShots(true, x, y, tank->direction))
                 tank->shotTimer = SHOT_TIMER;
         }
     }
@@ -103,6 +116,7 @@ void updateTank()
 }
 
 
+// desenha o tank do player
 void drawTank()
 {
     if(tank->lives < 0)
@@ -118,6 +132,7 @@ void drawTank()
 }
 
 
+// desabilita tank do player
 void deinitTank()
 {
     free(tank);

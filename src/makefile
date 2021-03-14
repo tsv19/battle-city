@@ -1,7 +1,8 @@
 
 CFLAGS = -Wall -std=c99
 
-objects = main.o game-states.o lib-game-states.o player.o enemy.o utils.o
+objects = main.o game-states.o lib-game-states.o player.o enemy.o utils.o \
+			tad-lde.o screens.o
 
 ALLEGRO = `pkg-config allegro-5 allegro_font-5 allegro_image-5 \
 			allegro_primitives-5 allegro_audio-5 allegro_acodec-5 \
@@ -13,7 +14,7 @@ all: battle-city
 battle-city: $(objects)
 	gcc $(objects) -o battle-city $(ALLEGRO)
 
-main.o: main.c main.h
+main.o: main.c
 	gcc -c $(CFLAGS) main.c
 
 game-states.o: game-states.c game-states.h
@@ -30,6 +31,12 @@ enemy.o: enemy.c enemy.h
 
 utils.o: utils.c utils.h
 	gcc -c $(CFLAGS) utils.c
+
+tad-lde.o: tad-lde.c tad-lde.h
+	gcc -c $(CFLAGS) tad-lde.c
+
+screens.o: screens.c screens.h
+	gcc -c $(CFLAGS) screens.c
 
 clean:
 	rm -f *.o

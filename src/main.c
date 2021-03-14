@@ -1,11 +1,14 @@
 
-#include "main.h"
+#include "utils.h"
+#include "game-states.h"
 
+// lib-game-states variable
 STATE_GAME state;
 
 int main ()
 {
 	state = START;
+	// loop principal
 	for (;;)
 		switch (state)
 		{

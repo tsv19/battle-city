@@ -2,17 +2,19 @@
 #include "game-states.h"
 
 // lib-game-states
-STATE_GAME              state;
-ALLEGRO_TIMER           *timer;
-ALLEGRO_EVENT_QUEUE     *queue;
-ALLEGRO_DISPLAY         *display;
-ALLEGRO_BITMAP			*buffer;
-ALLEGRO_FONT            *font;
-unsigned char           key[ALLEGRO_KEY_MAX];
-long                    score;
-long                    frames;
+ALLEGRO_FONT        *font;
+STATE_GAME          state;
+long                score;
+long                frames;
+ALLEGRO_TIMER       *timer;
+ALLEGRO_EVENT_QUEUE *queue;
+ALLEGRO_BITMAP		*buffer;
+ALLEGRO_DISPLAY     *display;
+unsigned char       key[ALLEGRO_KEY_MAX];
 
 
+// estado de inicializacao. realiza as configuracoes iniciais e exibe a 
+// tela inicial para o jogador
 void stateInit()
 {
     mustInit(al_init(), "allegro");
@@ -35,10 +37,10 @@ void stateInit()
     char str[1024];
     strcpy(str, "");
 
-    bool done      = false;
-    bool redraw    = true;
-	bool help      = false;
-	bool credits   = false;
+    bool redraw  = true;
+    bool done    = false;
+	bool help    = false;
+	bool credits = false;
     ALLEGRO_EVENT event;
 
     al_start_timer(timer);    
@@ -49,12 +51,14 @@ void stateInit()
         switch(event.type)
         {
             case ALLEGRO_EVENT_TIMER:
-                // faz update das coisas, posicoes etc
+
+                // fecha a janela se "ESC" for pressionado
                 if(key[ALLEGRO_KEY_ESCAPE]){
                     state = ENDGAME;
                     done  = true;
                 }
-                
+
+                // muda para o estado de "jogar" se "ENTER" for pressionado
                 if(key[ALLEGRO_KEY_ENTER]){
                     state = SERVING;
                     done  = true;
@@ -63,23 +67,27 @@ void stateInit()
                 redraw = true;
                 break;
 
+            // faz a checagem das teclas pressionadas para validar easter egg e
+            // outros menus 
             case ALLEGRO_EVENT_KEY_CHAR:
+            
+                // se letra "h" for pressionada, abre menu de ajuda
                 if (event.keyboard.keycode == ALLEGRO_KEY_H 
                     || event.keyboard.keycode == ALLEGRO_KEY_F11)
                 {
                     help = !help;
                 }
 
+                // se letra "c" for pressionada, abre menu de creditos
                 if (event.keyboard.keycode == ALLEGRO_KEY_C)
                 {
                     credits = !credits;
                 }
+                // TRECHO DE CODIGO RETIRADO DE
+                // https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
+                // verifica se o teclado escreveu um caractere utilizavel
                 else if (strlen(str) < 1024)
                 {
-                    // INICIO DO CODIGO RETIRADO 
-                    // DE https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
-                    // o codigo verifica se o teclado escreveu uma caractere utilizavel
-
                     if (strlen(str) == 1023)
                     {
                         strcpy(str, "");
@@ -103,11 +111,12 @@ void stateInit()
                         strcat(str, temp);
                     }
                 }
-                //FIM DO CODIGO RETIRADO
+                //FIM DO TRECHO RETIRADO
 
                 redraw = true;
                 break;
 
+            // verifica se a janela foi fechada 
             case ALLEGRO_EVENT_DISPLAY_CLOSE:
                 state = ENDGAME;
                 done  = true;
@@ -121,10 +130,12 @@ void stateInit()
 
         if(redraw && al_is_event_queue_empty(queue))
         {
+            // pre configuracoes de desenho na tela
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
             
 
+            // tela inicial
             if (!help && !credits)
             {
                 if (checkIfEasterEgg(str))
@@ -147,15 +158,18 @@ void stateInit()
                 al_draw_text(font, al_map_rgb(255, 50, 100), BUFFER_W/2, 
                             BUFFER_H/2 + 60, ALLEGRO_ALIGN_CENTER, "EXIT [ESC]");
             }
+            // tela de ajuda
             else if (help)
             {
                 helpScreen();
             }
+            // tela de creditos
             else if (credits)
             {
                 creditScreen();
             }
 
+            // configuracoes pos desenho na tela
             displayPostDraw();
             redraw = false;
         }
@@ -163,6 +177,8 @@ void stateInit()
 }
 
 
+// estado de servico. realiza a preparacao dos elementos principais para 
+// haver um jogo 
 void stateServe()
 {
     score = 0;
@@ -175,6 +191,7 @@ void stateServe()
 }
 
 
+// estado de play. realiza o controle do jogo, onde o jogo eh executado
 void statePlay()
 {
     bool redraw = true;
@@ -188,13 +205,13 @@ void statePlay()
         switch(event.type)
         {
             case ALLEGRO_EVENT_TIMER:
-                // faz update das coisas, posicoes etc
-                // updateWalls();
-                updateFX();
+                
+                // atualiza os elementos do jogo
                 updateTank();
-                updateEnemies();
+                updateEnemies(&score);
+                updateFX();
                 updateShots();
-                updateHud();
+                updateWalls();
 
                 if(key[ALLEGRO_KEY_ESCAPE])
                     state = ENDGAME;
@@ -219,16 +236,17 @@ void statePlay()
 
         if(redraw && al_is_event_queue_empty(queue))
         {
-            // redesenha as coisas da tela
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
-            drawWalls();
-            drawFX();
+            // desenha os elementos do jogo
+            drawMap();
             drawTank();
             drawEnemies();
+            drawFX();
             drawShots();
-            drawHud();
+            drawTrees();
+            drawHud(&score);
 
             displayPostDraw();
             redraw = false;
@@ -237,13 +255,16 @@ void statePlay()
 }
 
 
+// estado de game over. apos o jogo ser perdido, exibe uma tela onde havera o
+// score do jogador, asmaiores pontuacoes e a possibilidade de adicionar o nome
+// para salvar na pontuacao
 void stateGameOver()
 {
     bool redraw  = true;
     bool done    = false;
     ALLEGRO_EVENT event;
 
-
+    // inicializa tela de game over
     initScreenGameOver();
 
     char str[10]; 
@@ -271,10 +292,11 @@ void stateGameOver()
                     state = SERVING;
                     done  = true;
                 }
+                // CODIGO RETIRADO DE 
+                // https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
+                // verifica se o teclado escreveu uma caractere utilizavel
                 else if (strlen(str) < 10)
                 {
-                    //  INICIO DO CODIGO RETIRADO DE https://gist.github.com/rafaeltoledo/6e157f233e94168d1af0fb2ee988cc19#file-tutorial14-c
-                    //  o codigo verifica se o teclado escreveu uma caractere utilizavel
                     char temp[] = {event.keyboard.unichar, '\0'};
                     
                     if (event.keyboard.unichar >= '0' 
@@ -293,7 +315,7 @@ void stateGameOver()
                         strcat(str, temp);
                     }
                 }
-                //FIM DO CODIGO RETIRADO
+                //FIM DO TRECHO RETIRADO
 
                 redraw = true;
                 break;
@@ -311,10 +333,10 @@ void stateGameOver()
 
         if(redraw && al_is_event_queue_empty(queue))
         {
-            // redesenha as coisas da tela
             displayPreDraw();
             al_clear_to_color(al_map_rgb(0, 0, 0));
 
+            // desenha tela de game over
             drawScreenGameOver(str);
 
             displayPostDraw();
@@ -322,11 +344,13 @@ void stateGameOver()
         }
     }
 
+    // desabilita tela de game over e mapa
     deinitScreenGameOver(str);
     deinitMap();
 }
 
 
+// estado de fechamento do jogo. desabilita as configuracoes e encerra o jogo
 void stateCloseGame()
 {
     deinitAudio();
@@ -338,5 +362,4 @@ void stateCloseGame()
     destroyDisplay();
     destroyTimer();
     destroyQueue();
-	exit(0);
 }

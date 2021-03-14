@@ -5,7 +5,7 @@
 #include "utils.h"
 #include "enemy.h"
 #include "player.h"
-
+#include "screens.h"
 
 /* ================================= extern's =============================== */
 
@@ -15,7 +15,7 @@ extern long                     score;
 extern long                     frames;
 extern ALLEGRO_TIMER           	*timer;
 extern ALLEGRO_EVENT_QUEUE     	*queue;
-extern SHOT_T                   *shots;
+extern VET_BLOCK_T	            *walls;
 extern ALLEGRO_BITMAP			*buffer;
 extern ALLEGRO_DISPLAY         	*display;
 extern SPRITES_T                *sprites;
@@ -75,13 +75,13 @@ void deinitAudio();
 void initShots();
 
 // adiciona os tiros em um vetor caso haja disparo
-bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction);
+bool addShots(bool player, int x, int y, DIRECTIONS direction);
 
 // atualiza os tiros que estao em tela
 void updateShots();
 
-// confere a colisoe dos tiros com os elementos do jogo
-bool collideShots(bool player, int x, int y, int w, int h);
+// confere a colisao dos tiros com os elementos do jogo
+bool collideShots(bool player, bool list, int x, int y, int w, int h);
 
 // desenha na tela os tiros
 void drawShots();
@@ -92,41 +92,41 @@ void deinitShots();
 // inicializa o hud do jogo
 void initHud();
 
-// atualiza os pontos no hud do jogo
-void updateHud();
-
 // desenha na tela o hud
 void drawHud();
 
 // desabilita o hud
 void deinitHud();
 
-// inicializa a tela de game over 
-void initScreenGameOver();
-
-// desenha a tela de game over
-void drawScreenGameOver(char *str);
-
-// desabilita a tela de game over
-void deinitScreenGameOver(char *str);
-
 // inicializa o mapa do jogo com base em um arquivo "map.dat"
 void initMap();
 
 // cria as barreiras do jogo com base no arquivo lido
-void createWalls();
+void createWalls(MAP_T *map);
+
+// adiciona os blocks de forma individual para facilitar a destruicao por shots
+void addIndividualBlocks(LIST_T *list, int x, int y);
+
+// atualiza as barriras
+void updateWalls();
 
 // desenha as barreiras do jogo na tela
-void drawWalls();
+void drawMap();
+
+// faz o controle das colisoes com blocos de parede
+bool collideControl(int x, int y, int w, int h, DIRECTIONS direction);
+
+// confere a colisao com as paredes
+bool collideWalls(LIST_T *list, int x, int y, int w, int h, DIRECTIONS direction);
+
+// confere a colisao com a agua
+bool collideWater(int x, int y, int w, int h);
+
+// desenha as arvores do jogo
+void drawTrees();
 
 // desabilita o mapa
 void deinitMap();
-
-// configuracoes da tela de ajuda
-void helpScreen();
-
-// configuracoes da tela de creditos
-void creditScreen();
 
 // checa se o easter egg foi descoberto
 bool checkIfEasterEgg(char *str);

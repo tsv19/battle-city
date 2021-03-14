@@ -11,12 +11,11 @@
 typedef struct ENEMY_T
 {
     int x, y;
+    int shotTimer;
     bool used;
-    bool alive;
 	DIRECTIONS direction;
 } ENEMY_T;
 
-extern ENEMY_T *enemies;
 
 // inicializa os inimigos do jogo
 void initEnemies();
@@ -24,11 +23,13 @@ void initEnemies();
 // atualiza o estado dos inimigos
 void updateEnemies();
 
+// realiza a movimentacao do inimigo
+bool nextMove(ENEMY_T *enemies);
+
 // desenha os inimigos na tela
 void drawEnemies();
 
 // desabilita os inimigos
 void deinitEnemies();
-
 
 #endif

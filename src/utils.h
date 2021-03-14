@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include "tad-lde.h"
 #include <allegro5/allegro5.h>
 #include <allegro5/allegro_font.h>
 #include <allegro5/allegro_image.h>
@@ -38,6 +39,9 @@
 #define SPARKS_FRAMES    3
 #define EXPLOSION_FRAMES 2
 #define FX_N             128
+
+#define BASE_INIT_W 128
+#define BASE_INIT_H 208
 
 /* ================================ typedef's =============================== */
 
@@ -81,6 +85,7 @@ typedef struct SPRITES_T
     ALLEGRO_BITMAP* life;
     ALLEGRO_BITMAP* sheet;
     ALLEGRO_BITMAP* banana;
+    ALLEGRO_BITMAP* insignia;
     ALLEGRO_BITMAP* block[BLOCK_N];
     ALLEGRO_BITMAP* sheetEasterEgg1;
     ALLEGRO_BITMAP* sheetEasterEgg2;
@@ -116,13 +121,15 @@ typedef struct VET_SCORE_T
     char name[10];
 } VET_SCORE_T;
 
-// usado para armazenar informacoes sobre os blocos
-typedef struct BLOCK_T
+// definido para armazenar informacoes sobre os blocos
+typedef struct VET_BLOCK_T
 {
-    int x, y;
-    bool destroyed;
-    BLOCK whichBlock;
-} BLOCK_T;
+    LIST_T *bricks;
+    LIST_T *steel;
+    LIST_T *water;
+    LIST_T *tree;
+    LIST_T *contour;
+} VET_BLOCK_T;
 
 // definido para armazenar informacoes sobre explosoes
 typedef struct FX
@@ -138,10 +145,10 @@ typedef struct FX
 // faz a checagem da inicializacao 
 void mustInit(bool test, const char *description);
 
-// gera um numero aleatorio (inteiro) entre um intervalo fechado
+// gera um numero aleatorio (inteiro) entre um intervalo
 int between(int lower, int higher);
 
-// gera um numero aleatorio (float) entre um intervalo fechado
+// gera um numero aleatorio (float) entre um intervalo
 float betweenF(float lower, float higher);
 
 // checa colisao entre dois alvos

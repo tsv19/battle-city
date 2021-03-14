@@ -2,26 +2,26 @@
 #include "lib-game-states.h"
 
 // lib-game-states
-FX                      *fx;
-MAP_T                   *map;
-ALLEGRO_FONT            *font;
-PLAYER_T                *tank;
-ALLEGRO_TIMER           *timer;
-SHOT_T                  *shots;
-ALLEGRO_EVENT_QUEUE     *queue;
-ALLEGRO_BITMAP			*buffer;
-long                    **walls;
-ALLEGRO_DISPLAY         *display;
-SPRITES_T               *sprites;
-long                    scoreHud;
-bool                    easterEgg;
-VET_SCORE_T             *highScores;
-ALLEGRO_SAMPLE          *sampleShot;
-ALLEGRO_SAMPLE          *sampleExplode;
-unsigned char           key[ALLEGRO_KEY_MAX];
+FX                   *fx;
+MAP_T                *map;
+long                 score;
+ALLEGRO_FONT         *font;
+PLAYER_T             *tank;
+ALLEGRO_TIMER        *timer;
+SHOT_T               *shots;
+ALLEGRO_EVENT_QUEUE  *queue;
+VET_BLOCK_T          *walls;
+ALLEGRO_BITMAP       *buffer;
+ALLEGRO_DISPLAY      *display;
+SPRITES_T            *sprites;
+bool                 easterEgg;
+ALLEGRO_SAMPLE       *sampleShot;
+ALLEGRO_SAMPLE       *sampleExplode;
+unsigned char        key[ALLEGRO_KEY_MAX];
 
 /* ================================ display ==================================*/
 
+// faz a inicializacao do display
 void createDisplay()
 {
 	al_set_new_display_option(ALLEGRO_SAMPLE_BUFFERS, 1, ALLEGRO_SUGGEST);
@@ -34,6 +34,8 @@ void createDisplay()
     mustInit(buffer, "bitmap buffer");
 }
 
+
+// desabilita o display
 void destroyDisplay()
 {
     al_destroy_bitmap(buffer);
@@ -41,12 +43,16 @@ void destroyDisplay()
 }
 
 
+// configuracoes do display antes do desenho.
+// torna o buffer alvo dos desenhos
 void displayPreDraw()
 {
     al_set_target_bitmap(buffer);
 }
 
 
+// configuracoes do display apos o desenho ser feito no buffer.
+// torna o display alvo e faz a escala do desenho feito no buffer para o display
 void displayPostDraw()
 {
     al_set_target_backbuffer(display);
@@ -59,12 +65,14 @@ void displayPostDraw()
 
 /* ================================ keybord ==================================*/
 
+// inicializa teclado para receber dados
 void initKeyboard()
 {
     memset(key, 0, sizeof(key));
 }
 
 
+// atualiza dados vindo do teclado
 void updateKeyboard(ALLEGRO_EVENT *event)
 {
     switch(event->type)
@@ -86,6 +94,7 @@ void updateKeyboard(ALLEGRO_EVENT *event)
 
 /* ================================ sprites ==================================*/
 
+// inicializa os sprites do jogo
 void initSprites()
 {
     if (!sprites)
@@ -135,14 +144,17 @@ void initSprites()
     sprites->sparks[1] = grabSprite(sprites->sheet, 272, 129, 15, 15);
     sprites->sparks[2] = grabSprite(sprites->sheet, 288, 128, 16, 16);
 
-    sprites->explosion[0]    = grabSprite(sprites->sheet,   304, 129, 31, 30);
-    sprites->explosion[1]    = grabSprite(sprites->sheet,   335, 128, 32, 32);
+    sprites->explosion[0] = grabSprite(sprites->sheet, 304, 129, 31, 30);
+    sprites->explosion[1] = grabSprite(sprites->sheet, 335, 128, 32, 32);
+
+    sprites->insignia = grabSprite(sprites->sheet, 304, 32, SIZE_BLOCKS * 2, SIZE_BLOCKS * 2);
 
     sprites->DK     = grabSprite(sprites->sheetEasterEgg1,   0, 0, 63, 56);
     sprites->banana = grabSprite(sprites->sheetEasterEgg2,   0, 0, 30, 31);
 }
 
 
+// pega os sprites de um spritesheet e os coloca em variaveis
 ALLEGRO_BITMAP *grabSprite(ALLEGRO_BITMAP *sheet, int x, int y, int w, int h)
 {
     ALLEGRO_BITMAP *sprite = al_create_sub_bitmap(sheet, x, y, w, h);
@@ -151,6 +163,7 @@ ALLEGRO_BITMAP *grabSprite(ALLEGRO_BITMAP *sheet, int x, int y, int w, int h)
 }
 
 
+// desabilita os sprites do jogo
 void deinitSprites()
 {
     for (int i = 0; i < DIRECTIONS_N; i++)
@@ -189,6 +202,8 @@ void deinitSprites()
     {
         al_destroy_bitmap(sprites->explosion[i]);
     }
+    
+    al_destroy_bitmap(sprites->insignia);
 
     al_destroy_bitmap(sprites->DK);
     al_destroy_bitmap(sprites->banana);
@@ -203,6 +218,7 @@ void deinitSprites()
 
 /* ================================= timer ===================================*/
 
+// inicializa o timer do jogo
 void createTimer()
 {
 	timer = al_create_timer(1.0 / 60.0);
@@ -210,6 +226,7 @@ void createTimer()
 }
 
 
+// desabilita o timer do jogo
 void destroyTimer()
 {
     al_destroy_timer(timer);
@@ -218,6 +235,7 @@ void destroyTimer()
 
 /* ================================= queue ===================================*/
 
+// inicializa a fila de eventos
 void createQueue()
 {
 	queue = al_create_event_queue();
@@ -225,6 +243,7 @@ void createQueue()
 }
 
 
+// desabilita a fila de eventos
 void destroyQueue()
 {
     al_destroy_event_queue(queue);
@@ -233,6 +252,7 @@ void destroyQueue()
 
 /* ================================= audio ===================================*/
 
+// inicializa os audios do jogo 
 void initAudio()
 {
 	mustInit(al_install_audio(), "audio");
@@ -247,6 +267,8 @@ void initAudio()
     
 }
 
+
+// desabilita audios do jogo
 void deinitAudio()
 {
     al_destroy_sample(sampleShot);
@@ -256,6 +278,7 @@ void deinitAudio()
 
 /* ================================= shots ===================================*/
 
+// inicializa variaveis de controle dos tiros do jogo
 void initShots()
 {
     if (!shots)
@@ -269,7 +292,8 @@ void initShots()
 }
 
 
-bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
+// adiciona os tiros em um vetor caso haja disparo
+bool addShots(bool player, int x, int y, DIRECTIONS direction)
 {
     al_play_sample(sampleShot, 0.1, 0, player ? 1.0 : betweenF(1.5, 1.6), 
                     ALLEGRO_PLAYMODE_ONCE, NULL);
@@ -281,58 +305,28 @@ bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
 
         shots[i].player = player;
 
-        if(player)
+        shots[i].direction = direction;
+
+        if (shots[i].direction == UP)
         {
-            shots[i].direction = direction;
-
-            if (shots[i].direction == UP)
-            {
-                shots[i].x = x - (SHOT_W / 2) - 1;
-                shots[i].y = y - (TANK_H / 2);
-            }
-            if (shots[i].direction == DOWN)
-            {
-                shots[i].x = x - (SHOT_W / 2) - 1;
-                shots[i].y = y + SHOT_W + 1;
-            }
-            if (shots[i].direction == LEFT)
-            {
-                shots[i].x = x - (TANK_W / 2);
-                shots[i].y = y - 2;
-            }
-            if (shots[i].direction == RIGHT)
-            {
-                shots[i].x = x + SHOT_W + 1;
-                shots[i].y = y - (SHOT_H / 2);
-            }            
+            shots[i].x = x - (SHOT_W / 2) - 1;
+            shots[i].y = y - (TANK_H / 2);
         }
-        else // enemy
+        if (shots[i].direction == DOWN)
         {
-            shots[i].direction = direction;
-
-            if (shots[i].direction == UP)
-            {
-                shots[i].x = x - (SHOT_W / 2) - 1;
-                shots[i].y = y - (TANK_H / 2);
-            }
-            if (shots[i].direction == DOWN)
-            {
-                shots[i].x = x - (SHOT_W / 2) - 1;
-                shots[i].y = y + SHOT_W + 1;
-            }
-            if (shots[i].direction == LEFT)
-            {
-                shots[i].x = x - (TANK_W / 2);
-                shots[i].y = y - 2;
-            }
-            if (shots[i].direction == RIGHT)
-            {
-                shots[i].x = x + SHOT_W + 1;
-                shots[i].y = y - (SHOT_H / 2);
-            }    
-
-            shots[i].frame = 0;
+            shots[i].x = x - (SHOT_W / 2) - 1;
+            shots[i].y = y + SHOT_W + 1;
         }
+        if (shots[i].direction == LEFT)
+        {
+            shots[i].x = x - (TANK_W / 2);
+            shots[i].y = y - 2;
+        }
+        if (shots[i].direction == RIGHT)
+        {
+            shots[i].x = x + SHOT_W + 1;
+            shots[i].y = y - (SHOT_H / 2);
+        }            
 
         shots[i].frame = 0;
         shots[i].used = true;
@@ -343,6 +337,7 @@ bool addShots(bool player, bool straight, int x, int y, DIRECTIONS direction)
 }
 
 
+// atualiza os tiros que estao em tela
 void updateShots()
 {
     for(int i = 0; i < SHOTS_N; i++)
@@ -373,15 +368,15 @@ void updateShots()
 }
 
 
-bool collideShots(bool player, int x, int y, int w, int h)
+// confere a colisao dos tiros com os elementos do jogo
+bool collideShots(bool player, bool list, int x, int y, int w, int h)
 {
     for(int i = 0; i < SHOTS_N; i++)
     {
         if(!shots[i].used)
             continue;
 
-        // don't collide with one's own shots
-        if(shots[i].player == player)
+        if(shots[i].player == player && !list)
             continue;
 
         int sw, sh;
@@ -391,6 +386,7 @@ bool collideShots(bool player, int x, int y, int w, int h)
             sw = SHOT_W;
             sh = SHOT_H;
         }
+        else 
         {
             sw = BANANA_W;
             sh = BANANA_H;
@@ -398,7 +394,8 @@ bool collideShots(bool player, int x, int y, int w, int h)
 
         if(collide(x, y, x+w, y+h, shots[i].x, shots[i].y, shots[i].x+sw, shots[i].y+sh))
         {
-            addFX(true, shots[i].x + (sw / 2), shots[i].y + (sh / 2));
+            if (!list)
+                addFX(true, shots[i].x + (sw / 2), shots[i].y + (sh / 2));
 
             shots[i].used = false;
             return true;
@@ -409,6 +406,7 @@ bool collideShots(bool player, int x, int y, int w, int h)
 }
 
 
+// desenha na tela os tiros
 void drawShots()
 {
     for(int i = 0; i < SHOTS_N; i++)
@@ -416,7 +414,7 @@ void drawShots()
         if(!shots[i].used)
             continue;
 
-        int frame_display = (shots[i].frame / 2) % 2;
+        int frameDisplay = (shots[i].frame / 2) % 2;
 
         if(shots[i].player)
         {
@@ -433,7 +431,7 @@ void drawShots()
         }    
         else // enemy
         {
-            ALLEGRO_COLOR tint = frame_display 
+            ALLEGRO_COLOR tint = frameDisplay 
                         ? al_map_rgb_f(1, 1, 1) : al_map_rgb_f(0.5, 0.5, 0.5);
 
             if (easterEgg)
@@ -451,6 +449,7 @@ void drawShots()
 }
 
 
+// desabilita os tiros do jogo
 void deinitShots(){
     free(shots);
 }
@@ -458,139 +457,43 @@ void deinitShots(){
 
 /* ================================== hud  ===================================*/
 
+// inicializa o hud do jogo
 void initHud()
 {
     font = al_create_builtin_font();
     mustInit(font, "font");
-    score = 0;
 }
 
 
+// desenha na tela o hud
+void drawHud()
+{
+    al_draw_text(font, al_map_rgb_f(1,1,1), GAME_LIMIT_W, 4, 0, "SCORE");
+    al_draw_textf(font, al_map_rgb_f(1,1,1), GAME_LIMIT_W, 14, 0, "%06ld", score);
+
+    int spacing = TANK_W + 1;
+    for(int i = 0; i < tank->lives; i++)
+    {
+        al_draw_bitmap(sprites->life, (GAME_LIMIT_W) + (i * spacing), 24, 0);
+    }
+
+}
+
+
+// desabilita o hud
 void deinitHud()
 {
     al_destroy_font(font);
 }
 
 
-void updateHud()
-{
-    if(frames % 2)
-        return;
+/* ==================================  walls =================================*/
 
-    for(long i = 5; i > 0; i--)
-    {
-        long diff = 1 << i;
-        if(scoreHud <= (score - diff))
-            scoreHud += diff;
-    }
-}
-
-
-void drawHud()
-{
-    al_draw_text(font, al_map_rgb_f(1,1,1), BUFFER_W - 50, 4, 0, "SCORE");
-    al_draw_textf(font, al_map_rgb_f(1,1,1), BUFFER_W - 50, 14, 0, "%06ld", score);
-
-    int spacing = TANK_W + 1;
-    for(int i = 0; i < tank->lives; i++)
-    {
-        al_draw_bitmap(sprites->life, (BUFFER_W - 50) + (i * spacing), 24, 0);
-    }
-
-}
-
-/* =========================== screen game over ==============================*/
-
-void initScreenGameOver()
-{
-    FILE* scores = fopen("./resources/highscores.txt", "r");
-    mustInit(scores, "file of high scores");
-    
-    highScores = (VET_SCORE_T *)malloc(11 * sizeof(VET_SCORE_T));    
-    mustInit(highScores, "High Scores");
-    for(int i = 0; i < 10; i++)
-    { 
-        fscanf(scores, "%s %li", highScores[i].name, &highScores[i].score);
-    }
-
-    fclose(scores);
-}
-
-
-void drawScreenGameOver(char *str)
-{
-    al_draw_textf(font, al_map_rgb(255,  100,   70), BUFFER_W/2, 3, 
-                ALLEGRO_ALIGN_CENTER, "GAME OVER");
-
-    al_draw_textf(font, al_map_rgb(255,  70,   0), BUFFER_W/1.5, 30, 
-                ALLEGRO_ALIGN_CENTER, "HIGH SCORES:");
-    al_draw_textf(font, al_map_rgb(255, 255, 255), BUFFER_W/4, 30, 
-                ALLEGRO_ALIGN_CENTER, "YOUR SCORE:");
-
-    al_draw_textf(font, al_map_rgb(255, 255, 255), BUFFER_W/4, 50, 
-                ALLEGRO_ALIGN_CENTER, "Nome:");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), BUFFER_W/4, 80, 
-                ALLEGRO_ALIGN_CENTER, str);
-    al_draw_textf(font, al_map_rgb(255, 255, 255), BUFFER_W/4, 110, 
-                ALLEGRO_ALIGN_CENTER, "%li", score);
-
-    for (int i = 0; i < 10 ; i++)
-    {
-        al_draw_text(font, al_map_rgb(255, 25*i, 25*i), BUFFER_W/1.5, 
-                    50 + 15 * i, ALLEGRO_ALIGN_CENTER, highScores[i].name);
-
-        al_draw_textf(font, al_map_rgb(255, 25*i, 25*i), BUFFER_W/1.2, 
-                    50 + 15 * i , ALLEGRO_ALIGN_CENTER, "%li",highScores[i].score);
-    }
-
-    al_draw_textf(font, al_map_rgb(200, 200, 255), BUFFER_W/4, 170, 
-                ALLEGRO_ALIGN_CENTER, "[ENTER] REINICIAR");
-    al_draw_textf(font, al_map_rgb(255, 200, 200), BUFFER_W/4, 200, 
-                ALLEGRO_ALIGN_CENTER, "[ESC] SAIR");
-            
-}
-
-
-void deinitScreenGameOver(char *str)
-{
-    if (!strlen(str))
-        strcpy(str, "player1");
-    
-    strcpy(highScores[10].name, str); 
-    highScores[10].score = score;
-
-    VET_SCORE_T aux;
-
-    for (int i = 1; i < 11; i++) {
-        for (int j = 0; j < 11 - i; j++) {
-            if (highScores[j].score > highScores[j + 1].score) {
-                aux = highScores[j];
-                highScores[j] = highScores[j + 1];
-                highScores[j + 1] = aux;
-            }
-        }
-    }
-
-    FILE* scores = fopen("./resources/highscores.txt", "w+");
-    mustInit(scores, "file highscores.txt");
-
-    for(int i = 10; i > 0; i--)
-    {
-        fprintf(scores,"%s %li\n", highScores[i].name, highScores[i].score);
-    }
-
-    fclose(scores);
-    free(highScores);
-}
-
-
-/* ============================== create walls ==============================*/
-
+// inicializa o mapa do jogo com base em um arquivo "map.dat"
 void initMap()
 {
-    FILE  *mapGame = fopen("./resources/map.dat", "r");
-    mustInit(mapGame, "file map.dat");
+    FILE  *mapGame = fopen("./resources/map.txt", "r");
+    mustInit(mapGame, "file map.txt");
     
     map = (MAP_T *)malloc(sizeof(MAP_T));
     mustInit(map, "map variable");
@@ -615,117 +518,258 @@ void initMap()
     }
 
     fclose(mapGame);
+    createWalls(map);
 }
 
 
-void createWalls()
+// cria as barreiras do jogo com base no arquivo lido
+void createWalls(MAP_T *map)
 {
-
-     
-
     if (!walls)
     {
-        walls = (int **)calloc(BLOCK_N, sizeof(BLOCK_T*));
+        walls = (VET_BLOCK_T *)malloc(sizeof(VET_BLOCK_T));
+        mustInit(walls, "walls array");
     }
-}
 
-
-void drawWalls()
-{
+    walls->bricks = createList();
+    mustInit(walls->bricks, "brick block list");
+    
+    walls->steel = createList();
+    mustInit(walls->steel, "steel block list");
+    
+    walls->water = createList();
+    mustInit(walls->water, "water block list");
+    
+    walls->tree = createList();
+    mustInit(walls->tree, "tree block list");
+    
+    walls->contour = createList();
+    mustInit(walls->contour, "contour block list");
+    
     for (int i = 0; i < map->line; i++)
     {
         for (int j = 0; j < map->column; j++)
         {
-            if (map->matrix[i][j] == 1)
+            if (map->matrix[i][j] == BRICK)
             {
-                al_draw_bitmap(sprites->block[CONTOUR], j * 16, i * 16, 0);
+                addIndividualBlocks(walls->bricks, j * 16, i * 16);
+            }
+
+            else if (map->matrix[i][j] == STEEL)
+            {
+                addIndividualBlocks(walls->steel, j * 16, i * 16);
+            }
+
+            else if (map->matrix[i][j] == WATER)
+            {
+                addIndividualBlocks(walls->water, j * 16, i * 16);
+            }
+
+            else if (map->matrix[i][j] == TREE)
+            {
+                addIndividualBlocks(walls->tree, j * 16, i * 16);
+            }
+
+            else if (map->matrix[i][j] == CONTOUR)
+            {
+                addIndividualBlocks(walls->contour, j * 16, i * 16);
             }
         }
     }
 }
 
 
+// adiciona os blocks de forma individual para facilitar a destruicao por shots
+void addIndividualBlocks(LIST_T *list, int x, int y)
+{
+    push(list, x, y);
+    push(list, x, y + 8);
+    push(list, x + 8, y);
+    push(list, x + 8, y + 8);
+}
+
+
+// atualiza as barriras
+void updateWalls()
+{
+    NODE_T *aux;
+    
+    aux = walls->bricks->head;
+    while (aux != NULL)
+    {
+        if (collideShots(false, true, aux->x, aux->y, SIZE_BLOCKS, SIZE_BLOCKS))
+        {
+            NODE_T *temp = aux;
+            aux = aux->next;
+            pop(walls->bricks, temp->x, temp->y);
+            break;
+        }
+        else
+            aux = aux->next;
+    }
+
+    aux = walls->steel->head;
+    while (aux != NULL)
+    {
+        if (collideShots(false, true, aux->x, aux->y, SIZE_BLOCKS, SIZE_BLOCKS))
+            break;
+        aux = aux->next;
+    }
+
+    aux = walls->contour->head;
+    while (aux != NULL)
+    {
+        if (collideShots(false, true, aux->x, aux->y, SIZE_BLOCKS, SIZE_BLOCKS))
+            break;
+        aux = aux->next;
+    }
+}
+
+
+// desenha as barreiras do jogo na tela
+void drawMap()
+{
+    NODE_T *aux;
+    
+    aux = walls->bricks->head;
+    while (aux != NULL)
+    {
+        al_draw_bitmap(sprites->block[BRICK], aux->x, aux->y, 0);
+        aux = aux->next;
+    }
+    
+    aux = walls->steel->head;
+    while (aux != NULL)
+    {
+        al_draw_bitmap(sprites->block[STEEL], aux->x, aux->y, 0);
+        aux = aux->next;
+    }
+
+    aux = walls->water->head;
+    while (aux != NULL)
+    {
+        al_draw_bitmap(sprites->block[WATER], aux->x, aux->y, 0);
+        aux = aux->next;
+    }
+
+    aux = walls->contour->head;
+    while (aux != NULL)
+    {
+        al_draw_bitmap(sprites->block[CONTOUR], aux->x, aux->y, 0);
+        aux = aux->next;
+    }
+
+    al_draw_bitmap(sprites->insignia, BASE_INIT_W, BASE_INIT_H, 0);
+}
+
+
+// faz o controle das colisoes com blocos de parede
+bool collideControl(int x, int y, int w, int h, DIRECTIONS direction)
+{
+    if (collideWalls(walls->bricks, x, y, w, h, direction))
+        return true;
+
+    if (collideWalls(walls->steel, x, y, w, h, direction))
+        return true;
+
+    if (collideWalls(walls->contour, x, y, w, h, direction))
+        return true;
+
+    return false;
+}
+
+
+// confere a colisao com as paredes
+bool collideWalls(LIST_T *list, int x, int y, int w, int h, DIRECTIONS direction)
+{
+    NODE_T *aux = list->head;
+
+    int ax1 = x;
+    int ax2 = x + w;
+    int ay1 = y;
+    int ay2 = y + h;
+
+    int bx1, bx2, by1, by2;
+
+    while (aux != NULL)
+    {   
+        bx1 = aux->x + 2;
+        bx2 = aux->x + SIZE_BLOCKS - 2;
+        by1 = aux->y + 2;
+        by2 = aux->y + SIZE_BLOCKS - 2;
+
+        if (direction == UP && (ay1 == by2) && !(ax1 > bx2) && !(ax2 < bx1))
+        {
+            return true;
+        }
+        else if (direction == DOWN && (ay2 == by1) && !(ax1 > bx2) && !(ax2 < bx1))
+        {
+            return true;
+        }
+        else if (direction == LEFT && (ax1 == bx2) && !(ay1 > by2) && !(ay2 < by1))
+        {
+            return true;
+        }
+        else if (direction == RIGHT && (ax2 == bx1) && !(ay1 > by2) && !(ay2 < by1))
+        {
+            return true;
+        }
+        
+        aux = aux->next;
+    }
+    
+    return false;
+}
+
+
+// confere a colisao com a agua
+bool collideWater(int x, int y, int w, int h)
+{
+    NODE_T *aux;
+    
+    aux = walls->water->head;
+    while (aux != NULL)
+    {
+        if (collide(x, y, x + w, y + h, aux->x + 2, aux->y + 2, aux->x + SIZE_BLOCKS - 2, 
+            aux->y + SIZE_BLOCKS - 2))
+            return true;
+        
+        aux = aux->next;
+    }
+
+    return false;
+}
+
+
+// desenha as arvores do jogo
+void drawTrees()
+{
+    NODE_T *aux;
+
+    aux = walls->tree->head;
+    while (aux != NULL)
+    {
+        al_draw_bitmap(sprites->block[TREE], aux->x, aux->y, 0);
+        aux = aux->next;
+    }
+}
+
+
+// desabilita o mapa
 void deinitMap()
 {
+    destroyList(walls->bricks);
+    destroyList(walls->steel);
+    destroyList(walls->water);
+    destroyList(walls->tree);
+    destroyList(walls->contour);
     free(map);
-}
-
-/* =============================== help screen ============================== */
-
-void helpScreen()
-{
-    al_draw_bitmap(sprites->life, 10, 5, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 12, 0, 
-                "<- This is you");
-    
-    al_draw_bitmap(sprites->enemies[UP], 10, 25, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 32, 0, 
-                "<- This is your enemy");
-
-    al_draw_bitmap(sprites->block[BRICK], 15, 52, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 52, 0, 
-                "<- Can destroy if you shot it");
-
-    al_draw_bitmap(sprites->block[STEEL], 15, 72, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 72, 0, 
-                "<- Can't destroy if you shot it");
-
-    al_draw_bitmap(sprites->block[WATER], 15, 92, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 92, 0, 
-                "<- Water + tank = not cool");
-
-    al_draw_bitmap(sprites->block[TREE], 15, 112, 0);
-    al_draw_text(font, al_map_rgb(255, 255, 255), 30, 112, 0, 
-                "<- Tree + tank = where am I?");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 160, 0, 
-                "* Use the arrow keys to move the tank");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 180, 0, 
-                "* Use the space bar to shot");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 10, 200, 0, 
-                "* Try type \"kong\" in menu and play ;)");
-    
-    al_draw_text(font, al_map_rgb(255, 50, 80), BUFFER_W/2, 220, 
-                ALLEGRO_ALIGN_CENTER, "* To close the help [H][F1]");
-}
-
-/* ============================= credit screen ============================== */
-
-void creditScreen()
-{
-    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 10, 0, 
-                "* Author: Tiago Serique :)");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 30, 0, 
-                "* If you wanna see my face:");
-    
-    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 50, 0, 
-                "Instagram (@tecseit)");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 70, 0, 
-                "GitHub (@tiagoserique)");
-    
-    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 90, 0, 
-                "* Sounds:");
-            
-    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 110, 0, 
-                "www.freesounds.org");
-    
-    al_draw_text(font, al_map_rgb(255, 255, 255), 5, 130, 0, 
-                "* Spritesheets:");
-
-    al_draw_text(font, al_map_rgb(255, 255, 255), 20, 150, 0, 
-                "www.spriters-resource.com");
-
-    al_draw_text(font, al_map_rgb(255, 50, 80), BUFFER_W/2, 220, 
-                ALLEGRO_ALIGN_CENTER, "* To close the credits [C]");
 }
 
 
 /* ============================== easter egg ================================ */
 
+// checa se o easter egg foi descoberto
 bool checkIfEasterEgg(char *str)
 {
     if (strstr(str, "kong") != NULL)
@@ -736,6 +780,8 @@ bool checkIfEasterEgg(char *str)
     return false;
 }
 
+
+// desenha easter egg do menu
 void drawEasterEgg()
 {
     al_draw_bitmap(sprites->banana, BUFFER_W/1.5 + 30, BUFFER_H/1.5, 0);
@@ -745,6 +791,7 @@ void drawEasterEgg()
 
 /* ========================== FX, explosion, etc ============================ */
 
+// inicializa os "efeitos especiais"
 void initFX()
 {
     if (!fx)
@@ -759,11 +806,13 @@ void initFX()
     }
 }
 
+
+// adiciona explosao em um vetor caso haja destruicao de inimigo
 void addFX(bool spark, int x, int y)
 {
     if (!spark)
     {
-        al_play_sample(sampleExplode, 0.2, 0.0, 4.0, ALLEGRO_PLAYMODE_ONCE, NULL);
+        al_play_sample(sampleExplode, 0.1, 0.0, 4.0, ALLEGRO_PLAYMODE_ONCE, NULL);
     }
 
     for(int i = 0; i < FX_N; i++)
@@ -780,6 +829,8 @@ void addFX(bool spark, int x, int y)
     }
 }
 
+
+// atualiza o andamento da explosao
 void updateFX()
 {
     for(int i = 0; i < FX_N; i++)
@@ -797,6 +848,8 @@ void updateFX()
     }
 }
 
+
+// desenha a explosao
 void drawFX()
 {
     for(int i = 0; i < FX_N; i++)
@@ -804,10 +857,10 @@ void drawFX()
         if(!fx[i].used)
             continue;
 
-        int frame_display = fx[i].frame / 2;
+        int frameDisplay = fx[i].frame / 2;
         ALLEGRO_BITMAP* bmp = fx[i].spark
-            ? sprites->sparks[frame_display]
-            : sprites->explosion[frame_display]
+            ? sprites->sparks[frameDisplay]
+            : sprites->explosion[frameDisplay]
         ;
 
         int x = fx[i].x - (al_get_bitmap_width(bmp) / 2);
@@ -816,6 +869,8 @@ void drawFX()
     }
 }
 
+
+// desabilita as explosoes
 void deinitFX()
 {
     free(fx);

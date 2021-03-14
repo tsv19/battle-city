@@ -13,6 +13,8 @@
 #define TANK_H           16
 #define RESPAWN_TIMER    10
 #define INVINCIBLE_TIMER 50
+#define TANK_INIT_W      128
+#define TANK_INIT_H      176
 #define TANK_MAX_Y       (GAME_LIMIT_H - TANK_H)
 #define TANK_MAX_X       (GAME_LIMIT_W - TANK_W)
 
